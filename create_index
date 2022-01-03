@@ -1,0 +1,12 @@
+curl -X PUT "localhost:9200/geoss-test2?pretty" -H 'Content-Type: application/json' -d'
+{
+  "mappings": {
+    "properties": {
+      "embedding": {
+        "type": "dense_vector",
+        "dims": 768  
+      }
+    }
+  }
+}
+'

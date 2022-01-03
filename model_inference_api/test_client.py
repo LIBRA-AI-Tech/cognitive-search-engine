@@ -1,0 +1,11 @@
+import requests
+import json
+
+url = 'http://127.0.0.1:8000/encode'
+input_text = 'The modeling group (GTM) in the terrestrial ecosystem research project of the GRENE Arctic Climate Change Research Project (GRENE-TEA) aims to a) feed to the coupled global climate model (CGCM) research project for the possible improvement of the physical and ecological processes for the Arctic terrestrial modeling (excl. glaciers and ice sheets) in the extant terrestrial schemes in the CGCMs, and b) lay the foundations of the future-generation Arctic terrestrial model development. To achieve these goals GTM conducts a model intercomparison project (GTMIP) among the openly participating models. The GTMIP is designated to 1) enhance communications and understanding of the \"mind and hands\" between the modeling researchers and field scientists, 2) assess the uncertainty and variations stemmed from the extant model implementation/designation, and the variability due to climatic and historical conditions among the Arctic sites, and 3) feed such information and evaluations to the future-generation Arctic terrestrial model development. The GTMIP comprised of two stages: the first using observation data at the GRENE-TEA sites (stage 1) and the second using CGCM outputs for circumpolar regions (stage 2) to drive and validate the models. The meteorological variables provided for model forcing are total precipitation (Pr), air temperature at reference height (Tair), surface pressure (Psurf), wind speed at reference height (Wind), surface incident shortwave radiation (SWdown), surface incident long wave radiation (LWdown), and specific humidity at reference height (Qair). The stage 1 provides two levels of the half-hourly datasets for the GTMIP sites, namey level 0 (L0) and level 1 (L1) for Fairbanks (Poker Flat Research Range), Alaska, USA; Kevo (Kevo Research Station), Finland; Tiksi, Sakha Republic, Russian Federation; Yakutsk (Spasskaya Pad), Sakha Republic, Russian Federation. This level of the data (L1) is intended to be a site-fitted, ready-to-feed-into-the-model set of the above meteorological data, processed tactically from L0 data and local observations at/near the GRENE-TEA sites.'#'This is some sample text'
+
+res = requests.post(url, data=json.dumps({'text': input_text}))
+
+print(res.json())
+
+print(len(res.json()['embedding']))

@@ -1,20 +1,19 @@
-# Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+## Dev deployment
+```sh
+docker-compose -f docker-compose-dev.yaml up
+```
 
-# Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+## Prod deployment 
+```sh
+docker-compose up
+```
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
+## Inference API
+uvicorn model_inference:app --workers 1
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+https://www.comet.ml/site/how-to-10x-throughput-when-serving-hugging-face-models-without-a-gpu/
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+https://towardsdatascience.com/speeding-up-bert-search-in-elasticsearch-750f1f34f455
+https://huggingface.co/climatebert/distilroberta-base-climate-f
+https://towardsdatascience.com/elasticsearch-meets-bert-building-search-engine-with-elasticsearch-and-bert-9e74bf5b4cf2
+https://www.elastic.co/guide/en/machine-learning/master/ml-nlp-deploy-models.html#ml-nlp-select-model
