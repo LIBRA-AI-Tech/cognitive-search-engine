@@ -14,6 +14,7 @@ class ModelInference:
         model = SentenceTransformer(model_name)
         
         if quantize and 'qnnpack' in torch.backends.quantized.supported_engines:
+            # quantization issue https://github.com/pytorch/pytorch/issues/29327#issuecomment-552774174
             torch.backends.quantized.engine = 'qnnpack'
             model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
         
