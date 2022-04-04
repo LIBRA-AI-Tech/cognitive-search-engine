@@ -13,10 +13,13 @@ class ModelInference:
         
         model = SentenceTransformer(model_name)
         
-        if quantize and 'qnnpack' in torch.backends.quantized.supported_engines:
-            # quantization issue https://github.com/pytorch/pytorch/issues/29327#issuecomment-552774174
-            torch.backends.quantized.engine = 'qnnpack'
-            model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
+        if quantize:
+            # fbgemm is the default quantization engine and is the desired one in non-mobile builds
+            # if fbgemm is not available then engine is set to none
+            if torch.backends.quantized.engine == 'none' and 'qnnpack' in torch.backends.quantized.supported_engines:
+                # quantization issue https://github.com/pytorch/pytorch/issues/29327#issuecomment-552774174
+                torch.backends.quantized.engine = 'qnnpack'
+                model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
         
         self.model = model
 
