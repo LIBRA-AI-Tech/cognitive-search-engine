@@ -1,0 +1,13 @@
+build
+dist
+certs
+data
+output
+temp
+logs
+volume
+.env
+docker-compose.yml*
+compose.yml
+compose-testing.yml
+.git

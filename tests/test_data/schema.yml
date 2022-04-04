@@ -1,0 +1,54 @@
+created:
+  type: date
+  format: yyyy-MM-dd
+  index: true
+  ignore_malformed: true
+format:
+  type: keyword
+  index: true
+description:
+  type: text
+  index: false
+update:
+  type: date
+  format: yyyy-MM-dd
+  index: false
+  ignore_malformed: true
+type:
+  type: text
+  index: false
+title:
+  type: text
+  index: false
+when:
+  properties:
+    from:
+      type: date
+    to:
+      type: date
+parentId:
+  type: keyword
+  index: false
+online:
+  properties:
+    name:
+      type: text
+      index: false
+    description:
+      type: text
+      index: false
+    url:
+      type: text
+      index: false
+topic:
+  type: keyword
+  index: true
+id:
+  type: keyword
+  index: false
+keyword:
+  type: keyword
+  index: true
+geossCategory:
+  type: keyword
+  index: true

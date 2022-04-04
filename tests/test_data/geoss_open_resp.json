@@ -1,0 +1,567 @@
+{
+    "reports": [
+      {
+        "created": "",
+        "format": [],
+        "description": "Dissolved trace metals concentrations obtained during R/V Hakuho-maru KH-14-3 cruise",
+        "update": "",
+        "type": "simple",
+        "title": "Dissolved trace metals concentrations obtained during R/V Hakuho-maru KH-14-3 cruise",
+        "when": [
+          {
+            "from": "2014-07-03T03:00:00Z",
+            "to": "2014-07-30T03:00:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20140911-001"
+          }
+        ],
+        "topic": [
+          "oceans"
+        ],
+        "where": [
+          {
+            "east": -171,
+            "south": 0.3,
+            "north": 68,
+            "west": -168
+          }
+        ],
+        "id": "f399fad7-b8fb-49de-8ba1-452c58c30716",
+        "keyword": [
+          "Oceans > Ocean Chemistry > Trace Elements",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "ICP-MS",
+          "SHIPS",
+          "Ocean > Arctic Ocean",
+          "Ocean > Pacific Ocean",
+          "Water"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "2013-11-26",
+        "format": [
+          "Excel File"
+        ],
+        "description": "Meteorological observations were carried out on No.31 Glacier from June 2012 to August 2013. Air temperture, atmospheric pressur, solar radiation , relative humidity, wind direction, wind speed and precipitation were measured with automatic instruments every one hour.",
+        "update": "",
+        "type": "simple",
+        "title": "Meteorological observation data at No.31 Glacier, Suntar-Khayata, Eastern Siberia in 2012-2013",
+        "when": [
+          {
+            "from": "2012-08-29T03:00:00Z",
+            "to": "2013-08-06T03:00:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20131128-001"
+          }
+        ],
+        "topic": [
+          "climatologyMeteorologyAtmosphere"
+        ],
+        "where": [
+          {
+            "east": 140.88632,
+            "south": 62.5872,
+            "north": 62.5872,
+            "west": 140.88632
+          }
+        ],
+        "id": "d2a8b647-7fc5-4692-8f28-78fa59a0949c",
+        "keyword": [
+          "Atmosphere > Atmospheric Temperature > Air Temperature",
+          "Atmosphere > Atmospheric Water Vapor > Humidity",
+          "Atmosphere > Atmospheric Pressure > Surface Pressure",
+          "Atmosphere > Atmospheric Radiation > Shortwave Radiation",
+          "Atmosphere > Atmospheric Winds > Surface Winds",
+          "Atmosphere > Precipitation > Rain",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "FIXED OBSERVATION STATIONS",
+          "Continent > Europe > Eastern Europe > Russia",
+          "World > Europe > Eastern Europe > Russian Federation",
+          "Climate",
+          "Weather",
+          "Water",
+          "Suntar-Khayata",
+          "Glacier",
+          "Siberia"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "2015-08-31",
+        "format": [],
+        "description": "Two sets of dual-frequency GPS (Leica Geosystems System 1200) were used to measure the surface elevation with a kinematic positioning mode. One antenna was fixed on the roof of Qaanaaq Club House as a reference station. Another GPS antenna was mounted on a backpack to serve as a rover station. The survey was carried out along a longitudinal profile. Measurements were performed every seconds. Three-dimensional coordinates relative to the reference station were computed by post-processing the data with GPS analysis software (RTKLIB). The estimated error of the measurements is less than 5 cm.",
+        "update": "",
+        "type": "simple",
+        "title": "Surface elevation of Qaanaaq ice cap, Greenland in July 2015",
+        "when": [
+          {
+            "from": "2014-07-29T03:41:58Z",
+            "to": "2015-07-30T10:20:38Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20150831-006"
+          }
+        ],
+        "topic": [
+          "elevation"
+        ],
+        "where": [
+          {
+            "east": -69.07446,
+            "south": 77.490808,
+            "north": 77.525872,
+            "west": -69.250607
+          }
+        ],
+        "id": "1a150fa3-93bc-470b-9792-1c7a9f9281e3",
+        "keyword": [
+          "Cryosphere > Glaciers/Ice Sheets > Glacier Elevation/Ice Sheet Elevation",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "GPS",
+          "Geographic Region > Arctic",
+          "Climate"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "2014-10-09",
+        "format": [],
+        "description": "The modeling group (GTM) in the terrestrial ecosystem research project of the GRENE Arctic Climate Change Research Project (GRENE-TEA) aims to a) feed to the coupled global climate model (CGCM) research project for the possible improvement of the physical and ecological processes for the Arctic terrestrial modeling (excl. glaciers and ice sheets) in the extant terrestrial schemes in the CGCMs, and b) lay the foundations of the future-generation Arctic terrestrial model development. To achieve these goals GTM conducts a model intercomparison project (GTMIP) among the openly participating models. The GTMIP is designated to 1) enhance communications and understanding of the \"mind and hands\" between the modeling researchers and field scientists, 2) assess the uncertainty and variations stemmed from the extant model implementation/designation, and the variability due to climatic and historical conditions among the Arctic sites, and 3) feed such information and evaluations to the future-generation Arctic terrestrial model development. The GTMIP comprised of two stages: the first using observation data at the GRENE-TEA sites (stage 1) and the second using CGCM outputs for circumpolar regions (stage 2) to drive and validate the models. The meteorological variables provided for model forcing are total precipitation (Pr), air temperature at reference height (Tair), surface pressure (Psurf), wind speed at reference height (Wind), surface incident shortwave radiation (SWdown), surface incident long wave radiation (LWdown), and specific humidity at reference height (Qair). The stage 1 provides two levels of the half-hourly datasets for the GTMIP sites, namey level 0 (L0) and level 1 (L1) for Fairbanks (Poker Flat Research Range), Alaska, USA; Kevo (Kevo Research Station), Finland; Tiksi, Sakha Republic, Russian Federation; Yakutsk (Spasskaya Pad), Sakha Republic, Russian Federation. This level of the data (L1) is intended to be a site-fitted, ready-to-feed-into-the-model set of the above meteorological data, processed tactically from L0 data and local observations at/near the GRENE-TEA sites.",
+        "update": "",
+        "type": "simple",
+        "title": "GTMIP meteorological driving dataset for the GRENE-TEA observation sites (level 1.0)",
+        "when": [
+          {
+            "from": "1979-08-30T03:00:00Z",
+            "to": "2014-01-01T03:00:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET RELATED VISUALIZATION",
+            "description": "VISION",
+            "url": "https://ads.nipr.ac.jp/gtmip/graph/index.html"
+          }
+        ],
+        "topic": [
+          "climatologyMeteorologyAtmosphere"
+        ],
+        "where": [
+          {
+            "east": 129.618333,
+            "south": 62.255,
+            "north": 71.589167,
+            "west": -147.4875
+          }
+        ],
+        "id": "4f602d47-7e2a-4556-a5a7-d6b898887bc6",
+        "keyword": [
+          "Atmosphere > Atmospheric Winds > Surface Winds",
+          "Atmosphere > Atmospheric Winds > Surface Winds",
+          "Atmosphere > Atmospheric Temperature > Air Temperature",
+          "Atmosphere > Atmospheric Water Vapor > Humidity",
+          "Atmosphere > Atmospheric Radiation > Shortwave Radiation",
+          "Atmosphere > Atmospheric Radiation > Longwave Radiation",
+          "Atmosphere > Precipitation > Precipitation Amount",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "GROUND STATION",
+          "GROUND-BASED OBSERVATIONS",
+          "Continent > North America > United States of America > Alaska",
+          "Continent > Europe > Northern Europe > Scandinavia > Finland",
+          "Continent > Europe > Eastern Europe > Russia",
+          "World > Americas > Northern America > United States of America",
+          "World > Europe > Northern Europe > Finland",
+          "World > Europe > Eastern Europe > Russian Federation",
+          "Climate",
+          "Ecosystems",
+          "GRENE-TEA",
+          "GTMIP",
+          "Fairbanks",
+          "Kevo",
+          "Tiksi",
+          "Yakutsk",
+          "Chokurdakh",
+          "Tura",
+          "snow cover ratio",
+          "Ground freezing",
+          "Ground thawing",
+          "active layer",
+          "carbon budget",
+          "ERA-Interim",
+          "GPCP",
+          "CRU"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "",
+        "format": [],
+        "description": "Our research area is located at Spasskaya Pad scientific forest station (62N, 129E) 40 kilometers from Yakutsk in Northeastern Siberia, Russia. Air temperature was measured at the site.",
+        "update": "",
+        "type": "simple",
+        "title": "Air temperature measurements near Yakutsk, Russia in 2014",
+        "when": [
+          {
+            "from": "2014-03-10T03:51:00Z",
+            "to": "2014-08-06T12:51:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20150303-002"
+          }
+        ],
+        "topic": [
+          "climatologyMeteorologyAtmosphere"
+        ],
+        "where": [
+          {
+            "east": 129.168,
+            "south": 62.255,
+            "north": 62.255,
+            "west": 129.168
+          }
+        ],
+        "id": "32319407-5a89-4011-9edb-55539bc08adf",
+        "keyword": [
+          "Cryosphere > Snow/Ice > Snow Depth",
+          "Atmosphere > Atmospheric Temperature > Air Temperature",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "FIELD INVESTIGATION",
+          "Geographic Region > Eurasia",
+          "World > Europe > Eastern Europe > Russian Federation",
+          "Climate",
+          "Ecosystems",
+          "Weather",
+          "Taiga forest",
+          "Air temperature",
+          "Campbell CR1000",
+          "T&D Co. Ondotori Jr. RTR-51AL"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "",
+        "format": [],
+        "description": "Carbon flow dynamics in northern forest ecosystems were examined in middle part of Finland. Fine root production was estimated in three types of stands; Picea abies stands, Betula pendula stands, and mixed stands of these two species. Comparative estimation of four methods were conducted in the field experiments.",
+        "update": "",
+        "type": "simple",
+        "title": "Fine root production in Fenoscandia 2014 March",
+        "when": [
+          {
+            "from": "2014-03-09T03:00:00Z",
+            "to": "2015-03-31T03:00:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20141127-001"
+          }
+        ],
+        "topic": [
+          "biota"
+        ],
+        "where": [
+          {
+            "east": 31,
+            "south": 62,
+            "north": 63,
+            "west": 29
+          }
+        ],
+        "id": "f697197a-4812-413e-99f7-d97b79b67c51",
+        "keyword": [
+          "Biosphere > Terrestrial Ecosystems > Forests",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "FIELD INVESTIGATION",
+          "Continent > Europe > Northern Europe > Scandinavia > Finland",
+          "World > Europe > Northern Europe > Finland",
+          "Ecosystems",
+          "fine root",
+          "carbon dynamics",
+          "Leppilampi",
+          "Jaamankangas",
+          "Sykonvaara",
+          "Liippi",
+          "Haapovaara",
+          "Vaivio",
+          "Hirviniemi",
+          "Rauansolo",
+          "Hyypia"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "",
+        "format": [],
+        "description": "It is the result of microscopic analysis of snow algal community of the glacier. The samples were obtained at August 2012. These data represent the change of total algal biomass (biovolume), algal cell number and structure of snow algal community with altitude.",
+        "update": "",
+        "type": "simple",
+        "title": "Snow algal community of Suntar Khayata Glacier No.33, Eastern Siberia, August 2012, GRENE project",
+        "when": [
+          {
+            "from": "2012-07-08T11:48:00Z",
+            "to": "2012-07-09T02:01:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20131206-020"
+          }
+        ],
+        "topic": [
+          "environment"
+        ],
+        "where": [
+          {
+            "east": 140.92233,
+            "south": 62.58586,
+            "north": 62.590906,
+            "west": 140.910113
+          }
+        ],
+        "id": "bfd5bffc-e553-427c-b6f1-6a61740809c1",
+        "keyword": [
+          "Cryosphere > Glaciers/Ice Sheets > Ablation Zones/Accumulation Zones",
+          "Biosphere > Ecological Dynamics > Ecosystem Functions",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "FIELD INVESTIGATION",
+          "Geographic Region > Eurasia",
+          "World > Europe > Eastern Europe > Russian Federation",
+          "Climate",
+          "Ecosystems",
+          "Suntar Khayata",
+          "Russia",
+          "snow algae",
+          "cyanobacteria",
+          "green algae"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "",
+        "format": [],
+        "description": "Field photograph including oblique air photos during helicopter flight in 2013",
+        "update": "",
+        "type": "simple",
+        "title": "Photograph in Suntar Khayata in 2013 taken by T. Kadota",
+        "when": [
+          {
+            "from": "2013-07-28T03:00:00Z",
+            "to": "2013-08-23T03:00:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20131122-006"
+          }
+        ],
+        "topic": [
+          "environment"
+        ],
+        "where": [
+          {
+            "east": 141,
+            "south": 62,
+            "north": 62.6,
+            "west": 130
+          }
+        ],
+        "id": "d94b6f75-2cc8-454d-b4f4-aa1d37a130ae",
+        "keyword": [
+          "Cryosphere > Glaciers/Ice Sheets > Ablation Zones/Accumulation Zones",
+          "Cryosphere > Snow/Ice > Snow Depth",
+          "Cryosphere > Snow/Ice > Ice Depth/Thickness",
+          "Land Surface > Land Use/Land Cover > Land Cover",
+          "Land Surface > Topography > Landforms",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "GROUND-BASED OBSERVATIONS",
+          "AERIAL PHOTOGRAPHS",
+          "Continent > Europe > Eastern Europe > Russia",
+          "World > Europe > Eastern Europe > Russian Federation",
+          "Climate",
+          "Weather",
+          "Suntar Khayata",
+          "Russia",
+          "Yakutsk",
+          "MPI",
+          "Permafrost"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "2014-10-24",
+        "format": [],
+        "description": "First ica camp observation dstasets of east of the Northern Northwind Ridge site at 50km northweat from Araon in by 2014 Araon Cruse. This dataset included to SBE37, SBE56, DEFI and WH600.",
+        "update": "",
+        "type": "simple",
+        "title": "First Ice Camp of east of the Northern Northwind Ridge site at 50km northweat from Araon in by 2014 Araon Cruse.",
+        "when": [
+          {
+            "from": "2014-08-08T04:10:00Z",
+            "to": "2014-08-12T09:05:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20141024-002"
+          }
+        ],
+        "topic": [
+          "oceans"
+        ],
+        "where": [
+          {
+            "east": -147.8803,
+            "south": 77.658853,
+            "north": 77.91552,
+            "west": -147.58091
+          }
+        ],
+        "id": "06211824-2453-488a-acfa-f97c63b7f17b",
+        "keyword": [
+          "Oceans > Salinity/Density > Salinity",
+          "Oceans > Ocean Temperature > Water Temperature",
+          "Oceans > Ocean Pressure > Water Pressure",
+          "Oceans > Ocean Circulation > Ocean Currents",
+          "Oceans > Ocean Circulation > Buoy Position",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "OCEAN PLATFORMS",
+          "Ocean > Arctic Ocean",
+          "Geographic Region > Arctic",
+          "Climate",
+          "Araon",
+          "CTD",
+          "Current Meter",
+          "SBE",
+          "WH600",
+          "Ice Camp"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      },
+      {
+        "created": "",
+        "format": [],
+        "description": "Our research area is located near Chokurdakh (71N, 148E) in Northeastern Siberia, Russia, about 150 km inland from the Arctic sea coast along the Indigirka River. Soil thermal conductivities were observed at Kodac station which is situated in a forest-tundra landscape. The observations using KD2Pro (SH-1 sensors are installed from vertival section of small pit) include soil temperature, soil thermal conductivity, soil thermal diffusivity and thermal resistivity observations at 5, 10, 15, 20, 25cm depth.",
+        "update": "",
+        "type": "simple",
+        "title": "Soil thermal conductivity observations at one sites near Chokurdakh, Russia in 2013",
+        "when": [
+          {
+            "from": "2013-07-22T03:40:00Z",
+            "to": "2013-07-26T08:00:00Z"
+          }
+        ],
+        "parentId": "adsdbid",
+        "online": [
+          {
+            "name": "GET DATA",
+            "description": "Access to data files",
+            "url": "https://ads.nipr.ac.jp/dataset/A20141215-008"
+          }
+        ],
+        "topic": [
+          "climatologyMeteorologyAtmosphere"
+        ],
+        "where": [
+          {
+            "east": 148.2642,
+            "south": 70.2519,
+            "north": 70.637433,
+            "west": 147.468866
+          }
+        ],
+        "id": "8cd37903-8f7e-4015-b61b-84f234ad8ea4",
+        "keyword": [
+          "Cryosphere > Frozen Ground > Active Layer",
+          "Land Surface > Land Temperature > Land Surface Temperature",
+          "Biosphere > Terrestrial Ecosystems > Forests",
+          "JP/MEXT/NIPR",
+          "GRENE-ARCTIC",
+          "FIELD INVESTIGATION",
+          "Geographic Region > Eurasia",
+          "World > Europe > Eastern Europe > Russian Federation",
+          "Climate",
+          "Ecosystems",
+          "Weather",
+          "Forest-tundra boundary",
+          "Soil thermal conductivity",
+          "Soil thermal resistivity",
+          "Permafrost",
+          "Decagon Devices Inc. KD2 Pro with SH-1"
+        ],
+        "geossCategory": [
+          "documentFileGraphic"
+        ]
+      }
+    ],
+    "resultSet": {
+      "pageCount": 20,
+      "size": 200,
+      "pageIndex": 1,
+      "start": 1,
+      "pageSize": 10
+    }
+  }
+  

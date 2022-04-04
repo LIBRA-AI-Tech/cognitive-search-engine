@@ -1,0 +1,43 @@
+version: "3.6"
+
+services:
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    container_name: elasticsearch-single
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    mem_limit: ${MEM_LIMIT}
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: curl -s -f http://localhost:9200/_cat/health >/dev/null || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 120
+  
+  nosetests:
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    image: "eiffel/geoss-search-service:${VERSION}-testing"
+    build:
+      context: .
+      dockerfile: testing.dockerfile
+      args:
+        VERSION: "${VERSION}"
+    command: ['-v']
+    volumes:
+      - type: bind
+        source: .
+        target: /work
+    working_dir: /work
+    user: 1000:1000
+    environment:
+      - ELASTIC_NODE=http://elasticsearch:9200
+      - QUANTIZE_MODEL=${QUANTIZE_MODEL}
+      - ELASTIC_INDEX=${ELASTIC_INDEX}
+
