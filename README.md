@@ -17,7 +17,7 @@ pip install .
 ```
 For a production deployment, before installing the module, run
 ```
-pip -r requirements.txt -r requirements-production.txt
+pip install -r requirements.txt -r requirements-production.txt
 ```
 to install the specific versions of Python libraries that have been tested.
 

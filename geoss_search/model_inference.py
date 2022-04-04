@@ -13,7 +13,8 @@ class ModelInference:
         
         model = SentenceTransformer(model_name)
         
-        if quantize:
+        if quantize and 'qnnpack' in torch.backends.quantized.supported_engines:
+            torch.backends.quantized.engine = 'qnnpack'
             model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
         
         self.model = model
