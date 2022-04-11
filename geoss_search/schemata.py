@@ -1,6 +1,7 @@
 from fastapi import Query
 from pydantic import BaseModel
 from typing import List
+from enum import Enum
 
 class SearchItem(BaseModel):
     """Individual matching record."""
@@ -33,3 +34,16 @@ class SearchResults(BaseModel):
                 }]
             }
         }
+
+class HealthStatus(str, Enum):
+    ok: str='OK'
+    failed: str='FAILED'
+
+class HealthResults(BaseModel):
+    """Output of health endpoint"""
+    status: HealthStatus = Query(..., description="Health status")
+    details: str = Query(..., description="Details of problem in case of failure")
+    message: str = Query(..., description="Additional message")
+
+    class Config:
+        use_enum_values = True

@@ -48,7 +48,18 @@ async def search(
         "data": [{**hit['_source'], 'score': hit['_score']} for hit in response['hits']['hits']]
     }
 
-@app.get('/health', summary="Check the health of the service")
+@app.get('/health', response_model=HealthResults, summary="Service health")
 async def health():
-    health = await es.cluster.health()
-    return health
+    """Check the health of the service"""
+    try:
+        health = await es.cluster.health()
+    except Exception as e:
+        return {"status": "FAILED", "details": "Connection to search engine failed", "message": str(e)}
+    if health["status"] != 'green':
+        return {"status": "FAILED", "details": "Search engine status is {}".format(health["status"]), "message": ""}
+    if health["number_of_nodes"] != 3:
+        return {"status": "OK", "details": "", "message": "Currently {} nodes are running".format(health["number_of_nodes"])}
+    index_exists = await es.indices.exists(index=settings.elastic_index)
+    if not index_exists:
+        return {"status": "FAILED", "details": "Index `{}` does not exist in search engine".format(settings.elastic_index), "message": ""}
+    return {"status": "OK", "details": "", "message": "System is running healthy"}
