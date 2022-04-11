@@ -5,7 +5,7 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - type: bind
-        source: volume/certs
+        source: ./volume/certs
         target: /usr/share/elasticsearch/config/certs
     user: "0"
     command: >
@@ -71,10 +71,10 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - type: bind
-        source: volume/certs
+        source: ./volume/certs
         target: /usr/share/elasticsearch/config/certs
       - type: bind
-        source: volume/esdata01
+        source: ./volume/esdata01
         target: /usr/share/elasticsearch/data
     ports:
       - ${ES_PORT}:9200
@@ -118,10 +118,10 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - type: bind
-        source: volume/certs
+        source: ./volume/certs
         target: /usr/share/elasticsearch/config/certs
       - type: bind
-        source: volume/esdata02
+        source: ./volume/esdata02
         target: /usr/share/elasticsearch/data
     environment:
       - node.name=es02
@@ -162,10 +162,10 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - type: bind
-        source: volume/certs
+        source: ./volume/certs
         target: /usr/share/elasticsearch/config/certs
       - type: bind
-        source: volume/esdata03
+        source: ./volume/esdata03
         target: /usr/share/elasticsearch/data
     environment:
       - node.name=es03
@@ -218,20 +218,34 @@ services:
         source: ./logs
         target: /var/local/geoss_search/logs
       - type: bind
-        source: volume/certs
+        source: ./volume/certs
         target: /var/local/certs
+      - type: bind
+        source: ${MODEL_PATH}
+        target: /var/local/model
+        read_only: true
+      - type: bind
+        source: ${INIT_DATA:-/dev/null}
+        target: /var/local/data/init_data.json
+        read_only: true
+      - type: bind
+        source: ${INIT_DATA_SCHEMA:-/dev/null}
+        target: /var/local/data/schema.yml
+        read_only: true
     ports:
       - ${API_PORT}:8000
     environment:
       - APP_NAME=${APP_NAME}
       - FASTAPI_ENV=${FASTAPI_ENV}
-      - ELASTIC_NODE=https://localhost:9200
-      - CA_CERTS=/var/local/certs
+      - ELASTIC_NODE=https://es01:9200
+      - CA_CERTS=/var/local/certs/ca/ca.crt
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
-      - MODEL_PATH=${MODEL_NAME}
+      - MODEL_PATH=/var/local/model
       - QUANTIZE_MODEL=${QUANTIZE_MODEL}
-      - ELASTIC_INDEX=${INDEX_NAME}
+      - ELASTIC_INDEX=${ELASTIC_INDEX}
       - SEARCH_SIZE=${SEARCH_SIZE}
+      - INIT_DATA=/var/local/data/init_data.json
+      - INIT_DATA_SCHEMA=/var/local/data/schema.yml
 
   kibana:
     depends_on:
@@ -244,9 +258,11 @@ services:
     image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
     volumes:
       - type: bind
-        source: volume/certs
+        source: ./volume/certs
         target: /usr/share/kibana/config/certs
-      - kibanadata:/usr/share/kibana/data
+      - type: bind
+        source: ./volume/kibanadata
+        target: /usr/share/kibana/data
     ports:
       - ${KIBANA_PORT}:5601
     environment:

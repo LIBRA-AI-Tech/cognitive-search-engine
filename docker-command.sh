@@ -16,4 +16,31 @@ if [ -n "${LOGGING_ROOT_LEVEL}" ]; then
     sed -i -e "/^\[logger_root\]/,/^\[.*/ { s/^level=.*/level=${LOGGING_ROOT_LEVEL}/ }" ${LOGGING_FILE_CONFIG}
 fi
 
-exec geoss_search run --host 0.0.0.0 --port 8000
+if [ -f "${INIT_DATA}" ]; then
+    if [ -f "${INIT_DATA_SCHEMA}" ]; then
+        echo "Ingesting data"
+        geoss_search init ${INIT_DATA} --with-schema ${INIT_DATA_SCHEMA}
+    else
+        echo "Ingesting data using schema ${INIT_DATA_SCHEMA}"
+        geoss_search init ${INIT_DATA}
+    fi
+fi
+
+if [ "FASTAPI_ENV" = "development" ]; then
+    exec geoss_search run --host 0.0.0.0 --port 8000
+fi
+
+num_workers="4"
+num_threads="1"
+server_port="8000"
+timeout="2"
+export WORKER_CLASS=${WORKER_CLASS:-"uvicorn.workers.UvicornWorker"}
+
+exec gunicorn --access-logfile - \
+    --worker-tmp-dir /dev/shm \
+    --workers ${num_workers} \
+    --threads ${num_threads} \
+    -t ${timeout} \
+    -k "$WORKER_CLASS" \
+    --bind "0.0.0.0:${server_port}" \
+    "geoss_search:app"

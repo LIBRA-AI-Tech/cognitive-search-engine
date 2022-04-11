@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 python:3.8-slim-bullseye as build-stage-1
+FROM python:3.8-slim-bullseye as build-stage-1
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG DEBCONF_NOWARNINGS="yes"
@@ -10,10 +10,11 @@ RUN apt-get update && \
     apt-get clean
 
 COPY requirements.txt requirements-production.txt ./
-RUN pip3 install --no-cache-dir --prefix=/usr/local -r requirements.txt -r requirements-production.txt
+RUN pip3 install --upgrade pip wheel && \
+    pip3 install --prefix=/usr/local -r requirements.txt -r requirements-production.txt
 
 
-FROM --platform=linux/amd64 python:3.8-slim-bullseye
+FROM python:3.8-slim-bullseye
 
 ARG VERSION
 
