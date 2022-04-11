@@ -1,5 +1,6 @@
 volume/
 set_env_vars.sh
+logs/
 .DS_Store
 
 env
