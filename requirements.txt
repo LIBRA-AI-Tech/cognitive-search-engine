@@ -1,5 +1,6 @@
+tzlocal==2.1
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==1.11.0 
+torch==1.11.0
 sentence_transformers==2.2.0,<2.3.0
 numpy==1.22.3
 requests==2.27.1

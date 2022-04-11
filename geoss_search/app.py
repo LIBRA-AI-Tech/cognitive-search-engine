@@ -2,13 +2,15 @@ from fastapi import FastAPI, Query
 from .model_inference import predict
 from .settings import settings
 from .elastic import engine_connect
-from .schemata import SearchResults
+from .schemata import SearchResults, HealthResults
+from ._version import __version__
 
 es = engine_connect()
-app = FastAPI()
+app = FastAPI(title="GEOSS Search", description="GEOSS search with full text search", version=__version__)
 
 @app.on_event("shutdown")
 async def app_shutdown():
+    """Close connection to elastic search on application shutdown"""
     await es.close()
 
 @app.get('/', response_model=SearchResults, summary="Perform a search query")

@@ -3,6 +3,7 @@ import uvicorn
 import json
 import asyncio
 import warnings
+from typing import Optional
 from .model_inference import get_dims
 from .elastic import engine_connect, async_bulk
 from .settings import settings
@@ -10,6 +11,7 @@ from .enrich import enrich
 
 @click.group()
 def cli() -> None:
+    """Auxiliary commands for GEOSS search service"""
     pass
 
 @cli.command()
@@ -25,15 +27,35 @@ def cli() -> None:
     show_default=True,
 )
 def run(**kwargs) -> None:
+    """Serve application through the uvicorn ASGI web server"""
     uvicorn.run("geoss_search:app", **kwargs)
 
-async def _load_json(filename):
+async def _load_json(filename: str) -> dict:
+    """Lazy loads a json file.
+
+    Create an iterator for a JSON file and returns enriched entries with
+    vector embedding and WKT bounding box.
+
+    Args:
+        filename (str): Path of the JSON file (with filename)
+
+    Yields:
+        dict: Erniched entry
+    """
     from tqdm import tqdm
     with open(filename, 'r') as open_file:
         for report in tqdm(json.load(open_file).get('reports')):
             yield enrich(report)
 
-async def _ingest(path, with_schema=None, force=False):
+async def _ingest(path: str, with_schema: Optional[str]=None, force: bool=False) -> None:
+    """Ingest data to elastic search
+
+    Args:
+        path (str): Path of JSON file
+        with_schema (Optional[str], optional): A YAML file with schema information. Defaults to None.
+        force (bool, optional): When True, ingests data to ElasticSearch even if database is not empty
+            (removes index before ingesting). Defaults to False.
+    """
     import yaml
     es = engine_connect()
     if (not force and await es.indices.exists(index=settings.elastic_index)):
@@ -72,7 +94,12 @@ async def _ingest(path, with_schema=None, force=False):
 @click.argument('path', type=click.Path(exists=True))
 @click.option('--with-schema', type=click.Path(exists=True), help="Metadata schema according to ElasticSearch specification",)
 @click.option('--force', is_flag=True, default=False, help="Force data ingestion even if index exists.")
-def init(path, **kwargs) -> None:
+def init(path: str, **kwargs) -> None:
+    """Initialize application by ingesting data
+
+    Args:
+        path (str): Path to data file
+    """
     loop = asyncio.get_event_loop()
     loop.run_until_complete(_ingest(path, **kwargs))
 

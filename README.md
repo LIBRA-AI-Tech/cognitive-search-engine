@@ -19,7 +19,7 @@ For a production deployment, before installing the module, run
 ```
 pip install -r requirements.txt -r requirements-production.txt
 ```
-to install the specific versions of Python libraries that have been tested.
+to install the specific versions of the tested Python libraries.
 
 Documents can be bulky inserted into ElasticSearch using:
 ```
@@ -51,6 +51,8 @@ The following *environment variables* are available:
 * **QUANTIZE_MODEL**: Whether to quantize model [default: False].
 * **ELASTIC_INDEX**<sup>*</sup>: Name of *ElasticSearch Index* to use.
 * **RESULTS_PER_PAGE**: Number of results per page in query responses [default: 5].
+* **INIT_DATA**: Data to initialize search engine, in JSON format [If not set, engine will not be initialized].
+* **INIT_DATA_SCHEMA**: Schema of the data, in YAML format (see example in [tests/test_data/schema.yml](tests/test_data/schema.yml)) [if empty, default datatypes will be created in search engine].
 
 <sup>*</sup> Required.
 
@@ -58,6 +60,16 @@ The following *environment variables* are available:
 
 1. Copy `.env.example` to `.env` and configure.
 2. Adjust `docker-compose.yml` to your needs (e.g. specify volume source locations, etc.).
+    
+    Using the same configuration of the given *compose* file, you need to create a `volume` and a `logs` directory in the root path:
+
+        mkdir volume logs
+    
+   `volume` path should contain the following sub-directories:
+    - `certs`: will contain the CA certificate and certificates for each *ElasticSearch* node (content will be created automatically on first deployment),
+    - `esdata01`, `esdata02`, `esdata03`: data paths for the three *ElasticSearch* nodes,
+    - `kibanadata`: data path for *Kibana*.
+    
 3. Build with:
 ```
 docker-compose build
@@ -67,7 +79,9 @@ docker-compose build
 docker-compose up
 ```
 
-This procedure will result in a container of the service, and a 3-node cluster of *ElasticSearch*.
+This procedure will result in the service container, a 3-node cluster of *ElasticSearch*, and *Kibana* running in port 5601 (exposed to host).
+
+> In case the environment variable **INIT_DATA** is set, the data is ingested to the search engine before the search service starts running.
 
 ## Run tests
 Run *nosetests* using an ephemeral container with:

@@ -22,7 +22,8 @@ setuptools.setup(
     url="https://dev.azure.com/LibraAI/eiffel/_git/Infrastructure",
     packages=['geoss_search'],
     install_requires=[
-        "torch>=1.11.0,<1.12.0", 
+        "tzlocal>=2.1,<2.2",
+        "torch>=1.11.0,<1.12.0",
         "sentence_transformers>=2.2.0,<2.3.0",
         "numpy>=1.19.0,<1.23.0",
         "requests>=2.27.1,<2.28.0",

@@ -29,8 +29,21 @@ class ModelInference:
         return embeddings
 
 def predict(text: str) -> ModelInference.encode_text:
+    """Generate the embedding of a string
+
+    Args:
+        text (str): The text which be vectorized
+
+    Returns:
+        ModelInference.encode_text: Resulted vector
+    """
     model = ModelInference(settings.model_path, settings.quantize_model)
     return model.encode_text(text)
 
 def get_dims() -> int:
+    """Get the dimensionality of the model in use
+
+    Returns:
+        int: Number of dimensions
+    """
     return len(predict('test'))
