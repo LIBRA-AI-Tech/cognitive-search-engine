@@ -1,6 +1,7 @@
 from elasticsearch import AsyncElasticsearch
 from elasticsearch.helpers import async_bulk
 from elasticsearch.client import AsyncSearchClient
+import os
 from .settings import settings
 
 def engine_connect() -> AsyncElasticsearch:
@@ -15,6 +16,6 @@ def engine_connect() -> AsyncElasticsearch:
         return AsyncElasticsearch(settings.elastic_node)
     return AsyncElasticsearch(
         settings.elastic_node,
-        ca_certs=settings.ca_certs,
+        ca_certs=os.path.join(settings.ca_certs, 'ca.crt'),
         basic_auth=("elastic", settings.elastic_password),
     )
