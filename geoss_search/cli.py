@@ -7,7 +7,7 @@ from typing import Optional
 from .model_inference import get_dims
 from .elastic import engine_connect, async_bulk
 from .settings import settings
-from .enrich import enrich
+from .enrich import enrich, bulk_predict
 
 @click.group()
 def cli() -> None:
@@ -47,11 +47,20 @@ async def _load_json(filename: str) -> dict:
         for report in tqdm(json.load(open_file).get('reports')):
             yield enrich(report)
 
+async def _load_parquet(filename: str) -> dict:
+    import pandas as pd
+    from tqdm import tqdm
+    df = pd.read_parquet(filename)
+    df = bulk_predict(df)
+    for index, row in tqdm(df.iterrows()):
+        yield row.to_dict()
+        
+
 async def _ingest(path: str, with_schema: Optional[str]=None, force: bool=False) -> None:
     """Ingest data to elastic search
 
     Args:
-        path (str): Path of JSON file
+        path (str): Path of data file; JSON and parquet files are supported.
         with_schema (Optional[str], optional): A YAML file with schema information. Defaults to None.
         force (bool, optional): When True, ingests data to ElasticSearch even if database is not empty
             (removes index before ingesting). Defaults to False.
@@ -87,7 +96,15 @@ async def _ingest(path: str, with_schema: Optional[str]=None, force: bool=False)
     }
     await es.indices.delete(index=settings.elastic_index, ignore=[400, 404])
     await es.indices.create(body=mappings, index=settings.elastic_index, ignore=[400, 404])
-    await async_bulk(es, _load_json(path), index=settings.elastic_index)
+    if path.endswith('.json'):
+        await async_bulk(es, _load_json(path), index=settings.elastic_index)
+    elif path.endswith('.parquet'):
+        try:
+            await async_bulk(es, _load_parquet(path), index=settings.elastic_index)
+        except:
+            pass
+    else:
+        raise Exception(f"path is not supported")
     await es.close()
 
 @cli.command()

@@ -1,7 +1,7 @@
 import torch
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.LoggingHandler import install_logger
-from typing import List
+from typing import List, Union
 import numpy as np
 from .settings import settings
 
@@ -20,13 +20,24 @@ class ModelInference:
                 # quantization issue https://github.com/pytorch/pytorch/issues/29327#issuecomment-552774174
                 torch.backends.quantized.engine = 'qnnpack'
                 model = torch.quantization.quantize_dynamic(model, {torch.nn.Linear}, dtype=torch.qint8)
-        
+
         self.model = model
 
-    def encode_text(self, input_text: str) -> List[np.float32]:
+    def encode_text(self, input_text: Union[str, list]) -> List[np.float32]:
+        if input_text is None:
+            return []
         with torch.no_grad():
-            embeddings = self.model.encode(input_text).tolist()
+            kwargs = {"show_progress_bar": True} if isinstance(input_text, list) else {}
+            embeddings = self.model.encode(input_text, **kwargs).tolist()
         return embeddings
+
+    def get_dims(self) -> int:
+        """Get the dimensionality of the model
+
+        Returns:
+            int: Number of dimensions
+        """
+        return self.model.get_sentence_embedding_dimension()
 
 def predict(text: str) -> ModelInference.encode_text:
     """Generate the embedding of a string
@@ -46,4 +57,5 @@ def get_dims() -> int:
     Returns:
         int: Number of dimensions
     """
-    return len(predict('test'))
+    model = ModelInference(settings.model_path, settings.quantize_model)
+    return model.get_dims()

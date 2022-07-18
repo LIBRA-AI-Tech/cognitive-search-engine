@@ -1,13 +1,13 @@
 from fastapi import Query
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from enum import Enum
 
 class SearchItem(BaseModel):
     """Individual matching record."""
     id: str = Query(..., description="Record id")
     title: str = Query(..., description="Record title")
-    description: str = Query(..., description="Record description")
+    description: Optional[str] = Query(..., description="Record description")
     score: float = Query(..., description="Cosine similarity score of this record")
 
 class SearchResults(BaseModel):
@@ -16,7 +16,7 @@ class SearchResults(BaseModel):
     page: int = Query(..., description="Current page")
     totalPages: int = Query(..., description="Total number of pages")
     numberOfResults: int = Query(..., description="Total number of results")
-    maxScore: float = Query(..., description="Maximum value of scores")
+    maxScore: Optional[float] = Query(..., description="Maximum value of scores")
     data: List[SearchItem] = Query(..., description="Matching records.")
 
     class Config:

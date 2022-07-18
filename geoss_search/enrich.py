@@ -1,4 +1,5 @@
 from typing import Union
+import pandas as pd
 from .model_inference import predict
 
 def _toWKT(coords: dict) -> dict:
@@ -27,6 +28,16 @@ def enrich(entry: Union[dict, list]) -> Union[dict, list]:
     """
     if isinstance(entry, list):
         return [enrich(element) for element in entry]
-    entry['_embedding'] = predict(entry['description'])
+    if '_embedding' not in entry:
+        entry['_embedding'] = predict(entry['title'] + ' ' + entry['description'])
     entry['_geom'] = [_toWKT(elem) for elem in entry['where']]
     return entry
+
+def bulk_predict(df: pd.DataFrame) -> pd.DataFrame:
+    text = df.apply(lambda e: e['title'] + ' ' + e['description'] if e['description'] is not None else e['title'], axis=1).values
+    if 'embeddings' in df:
+        df.rename({'embeddings': '_embedding'}, axis=1, inplace=True)
+    else:
+        df['_embedding'] = predict(text)
+    df['_geom'] = df['where'].apply(lambda where: [_toWKT(e) for e in where] if where is not None else [])
+    return df
