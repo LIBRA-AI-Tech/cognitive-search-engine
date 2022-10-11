@@ -16,15 +16,18 @@ if [ -n "${LOGGING_ROOT_LEVEL}" ]; then
     sed -i -e "/^\[logger_root\]/,/^\[.*/ { s/^level=.*/level=${LOGGING_ROOT_LEVEL}/ }" ${LOGGING_FILE_CONFIG}
 fi
 
-if [ -f "${INIT_DATA}" ]; then
-    if [ -f "${INIT_DATA_SCHEMA}" ]; then
-        echo "Ingesting data"
-        geoss_search init ${INIT_DATA} --with-schema ${INIT_DATA_SCHEMA}
-    else
-        echo "Ingesting data using schema ${INIT_DATA_SCHEMA}"
-        geoss_search init ${INIT_DATA}
-    fi
-fi
+# if [ -f "${INIT_DATA}" ]; then
+#     if [ -f "${INIT_DATA_SCHEMA}" ]; then
+#         echo "Ingesting data"
+#         geoss_search init ${INIT_DATA} --with-schema ${INIT_DATA_SCHEMA}
+#     else
+#         echo "Ingesting data using schema ${INIT_DATA_SCHEMA}"
+#         geoss_search init ${INIT_DATA}
+#     fi
+# fi
+
+echo "Creating elastic index..."
+geoss_search create-elastic-index --with-schema ${INIT_DATA_SCHEMA}
 
 if [ "FASTAPI_ENV" = "development" ]; then
     exec geoss_search run --host 0.0.0.0 --port 8000

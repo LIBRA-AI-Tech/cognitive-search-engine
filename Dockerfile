@@ -37,7 +37,8 @@ RUN chmod a+x /usr/local/bin/docker-command.sh
 
 RUN mkdir /var/local/geoss_search && \
     useradd -U --home /var/local/geoss_search fastapi && \
-    chown -R fastapi: /var/local/geoss_search
+    chown -R fastapi: /var/local/geoss_search && \
+    chown -R fastapi: /usr/local/geoss_search
 WORKDIR /var/local/geoss_search
 RUN mkdir ./logs && chown fastapi: ./logs
 COPY --chown=fastapi logging.conf .

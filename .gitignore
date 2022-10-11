@@ -9,6 +9,8 @@ env
 __pycache__/
 *.py[cod]
 *$py.class
+.vscode/
+.devcontainer/
 
 # C extensions
 *.so

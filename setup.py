@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from gettext import install
-from posixpath import dirname
 import setuptools
 from importlib.machinery import SourceFileLoader
 import os
@@ -20,14 +18,14 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://dev.azure.com/LibraAI/eiffel/_git/Infrastructure",
-    packages=['geoss_search'],
+    packages=setuptools.find_packages(),
     install_requires=[
         "tzlocal>=2.1,<2.2",
         "torch>=1.11.0,<1.12.0",
         "sentence_transformers>=2.2.0,<2.3.0",
         "numpy>=1.19.0,<1.23.0",
         "requests>=2.27.1,<2.28.0",
-        "elasticsearch[async]>=8.1.0,<8.2.0",
+        "elasticsearch[async]>=8.4.0,<8.5.0",
         "fastapi>=0.75.0,<0.76.0",
         "uvicorn[standard]>=0.17.6,<0.18.0",
         "pydantic>=1.9.0,<1.9.1",
