@@ -1,0 +1,6 @@
+api:
+  environment:
+    FASTAPI_ENV=production
+  volumes:
+    - /var/log/geoss_search:/var/local/geoss_search/logs
+

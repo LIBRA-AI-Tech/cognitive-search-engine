@@ -1,5 +1,6 @@
+import os
 from fastapi import Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, DirectoryPath, validator
 from typing import List, Optional
 from enum import Enum
 from datetime import datetime
@@ -302,7 +303,7 @@ class RawMetadata(BaseModel):
     format: List[str] = Query(None, description="Actual data format(s)")
     description: str = Query(None, description="Dataset description")
     attributeDescription: List[str] = Query(None, description="Description of attributes")
-    source: List[SourceSchema] = Query(None, description="Originator source")
+    source: SourceSchema = Query(None, description="Originator source")
     attributeTitle: List[str] = Query(None, description="Attributes' titles")
     type: str = Query(None, description="Dataset type")
     title: str = Query(..., description="Dataset title")
@@ -445,3 +446,16 @@ class HealthResults(BaseModel):
 
     class Config:
         use_enum_values = True
+
+class IngestBody(BaseModel):
+    """Ingest POST request body"""
+    path: str = Query(..., description="Relative path of directory that contains the data files to ingest")
+    reset: bool = Query(False, description="When True, the Elastic index is destroyed before ingesting new data and re-build from scratch")
+    embeddings: str = Query('embeddings', description="Name of the attribute that holds the embedding compoments")
+
+    @validator('path')
+    def build_abs_path(cls, value):
+        path = os.path.join(os.getenv("INIT_DATA"), value)
+        if not os.path.isfile(path):
+            raise ValueError(f'file or directory at path {value} does not exist')
+        return path

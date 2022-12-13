@@ -1,13 +1,10 @@
-version: "2.2"
+version: "3.8"
 
 services:
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
-      - type: bind
-        source: ./volume/certs
-        target: /usr/share/public_cert
     user: "0"
     command: >
       bash -c '
@@ -54,17 +51,19 @@ services:
         chown -R root:root config/certs;
         find . -type d -exec chmod 750 \{\} \;;
         find . -type f -exec chmod 640 \{\} \;;
-        echo "Waiting for Elasticsearch availability";
-        until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
-        echo "Setting kibana_system password";
-        until curl -s -X POST --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+          echo "Waiting for Elasticsearch availability";
+          until curl -s --cacert config/certs/ca/ca.crt https://es01:9200 | grep -q "missing authentication credentials"; do sleep 30; done;
+        if [[ -z "${KIBANA_PASSWORD}" ]]; then
+          echo "Setting kibana_system password";
+          until curl -s -X POST --cacert config/certs/ca/ca.crt -u elastic:${ELASTIC_PASSWORD} -H "Content-Type: application/json" https://es01:9200/_security/user/kibana_system/_password -d "{\"password\":\"${KIBANA_PASSWORD}\"}" | grep -q "^{}"; do sleep 10; done;
+        fi
         echo "All done!";
       '
     healthcheck:
-      test: ["CMD-SHELL", "[ -f config/certs/es01/es01.crt ]"]
+      test: ["CMD-SHELL", "[ -f /usr/share/elasticsearch/config/certs/es01/es01.crt ]"]
       interval: 1s
       timeout: 5s
-      retries: 120
+      retries: 2
 
   es01:
     depends_on:
@@ -190,7 +189,7 @@ services:
       timeout: 10s
       retries: 120
 
-  geoss_search:
+  api:
     depends_on:
       es01:
         condition: service_healthy
@@ -201,12 +200,9 @@ services:
     image: "eiffel/geoss-search-service:${VERSION}"
     build:
       context: .
-      args: 
+      args:
         VERSION: "${VERSION}"
     volumes:
-      - type: bind
-        source: ./logs
-        target: /var/local/geoss_search/logs
       - type: bind
         source: ${MODEL_PATH}
         target: /var/local/model
@@ -219,16 +215,16 @@ services:
         source: ${INIT_DATA_SCHEMA:-/dev/null}
         target: /var/local/metadata/schema.yml
         read_only: true
-      - type: bind
-        source: ./volume/certs
+      - type: volume
+        source: certs
         target: /var/local/certs
+        read_only: true
     ports:
       - ${API_PORT}:8000
     environment:
       - APP_NAME=${APP_NAME}
-      - FASTAPI_ENV=${FASTAPI_ENV}
       - ELASTIC_NODE=https://es01:9200
-      - CA_CERTS=/var/local/certs
+      - CA_CERTS=/var/local/certs/ca
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
       - MODEL_PATH=/var/local/model
       - QUANTIZE_MODEL=${QUANTIZE_MODEL}
@@ -236,37 +232,7 @@ services:
       - SEARCH_SIZE=${SEARCH_SIZE}
       - INIT_DATA=/var/local/metadata/data/
       - INIT_DATA_SCHEMA=/var/local/metadata/schema.yml
-
-  kibana:
-    depends_on:
-      es01:
-        condition: service_healthy
-      es02:
-        condition: service_healthy
-      es03:
-        condition: service_healthy
-    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
-    volumes:
-      - certs:/usr/share/kibana/config/certs
-      - kibanadata:/usr/share/kibana/data
-    ports:
-      - ${KIBANA_PORT}:5601
-    environment:
-      - SERVERNAME=kibana
-      - ELASTICSEARCH_HOSTS=https://es01:9200
-      - ELASTICSEARCH_USERNAME=kibana_system
-      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
-      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
-    mem_limit: ${MEM_LIMIT}
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
-        ]
-      interval: 10s
-      timeout: 10s
-      retries: 120
+      - API_KEY=${API_KEY}
 
 volumes:
   certs:
@@ -276,6 +242,4 @@ volumes:
   esdata02:
     driver: local
   esdata03:
-    driver: local
-  kibanadata:
     driver: local

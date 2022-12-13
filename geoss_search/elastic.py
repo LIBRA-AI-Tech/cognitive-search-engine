@@ -56,14 +56,14 @@ class Aggregation:
 
 class Query:
 
-    def __init__(self, es: AsyncElasticsearch=engine_connect()) -> None:
+    def __init__(self, es: AsyncElasticsearch=engine_connect(), page: int=1, records: Optional[int]=None, index=settings.elastic_index) -> None:
         self._es = es
-        self._index = settings.elastic_index
+        self._index = index
 
         self.query_: Optional[str] = None
         self.min_score: Optional[float] = None
-        self.page_: int = 1
-        self.records: int = 10
+        self.page_: int = page
+        self.records: int = records
         self.filter_: List[Dict[str, str]] = []
         self.aggregations: dict = {}
         self.timeStart: Optional[datetime] = None
@@ -174,8 +174,11 @@ class Query:
 
         if self.query_ is not None and self.min_score is not None:
             payload["min_score"] = self.min_score
-        payload["from"] = self.records * (self.page_ - 1)
-        payload["size"] = self.records
+        if self.query_ is not None:
+            payload["query"] = self.query_
+        if self.records is not None:
+            payload["from"] = self.records * (self.page_ - 1)
+            payload["size"] = self.records
 
         for function, body in self.custom_:
             payload[function] = body
@@ -204,12 +207,13 @@ class SemanticSearch(Query):
                 "num_candidates": 10000,
                 "filter": self.filter_
             }
+            self.query_ = None
         return super().parse()
 
 class ExactSearch(Query):
 
     def parse(self) -> dict:
-        self._payload["query"] = {
+        self.query_ = {
             "match_phrase": {
                 "description": {
                     "query": self.query_,

@@ -1,8 +1,6 @@
-from turtle import title
 from fastapi import Query
 from pydantic import BaseModel, Field
 from typing import List, Literal, Union, Tuple
-from typing_extensions import Annotated
 from enum import Enum
 
 class GeometryType(str, Enum):

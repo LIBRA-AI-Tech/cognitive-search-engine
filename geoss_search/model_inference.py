@@ -27,7 +27,7 @@ class ModelInference:
         if input_text is None:
             return []
         with torch.no_grad():
-            kwargs = {"show_progress_bar": True} if isinstance(input_text, list) else {}
+            kwargs = {"show_progress_bar": False}
             embeddings = self.model.encode(input_text, **kwargs).tolist()
         return embeddings
 

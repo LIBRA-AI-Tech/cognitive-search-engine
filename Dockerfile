@@ -11,10 +11,10 @@ RUN apt-get update && \
 
 COPY requirements.txt requirements-production.txt ./
 RUN pip3 install --upgrade pip wheel && \
-    pip3 install --prefix=/usr/local -r requirements.txt -r requirements-production.txt
+    pip3 install --prefix=/usr/local -r requirements.txt
 
-
-FROM python:3.8-slim-bullseye
+# BASE Image
+FROM python:3.8-slim-bullseye as base
 
 ARG VERSION
 
@@ -28,8 +28,11 @@ ENV PYTHONPATH="/usr/local/lib/python${PYTHON_VERSION}/site-packages"
 
 COPY --from=build-stage-1 /usr/local /usr/local
 
+# PRODUCTION Image
+FROM base as production
+
 RUN mkdir /usr/local/geoss_search/
-COPY setup.py README.md requirements.txt /usr/local/geoss_search/
+COPY setup.py README.md requirements-production.txt /usr/local/geoss_search/
 COPY geoss_search /usr/local/geoss_search/geoss_search
 
 COPY docker-command.sh /usr/local/bin
@@ -44,10 +47,17 @@ RUN mkdir ./logs && chown fastapi: ./logs
 COPY --chown=fastapi logging.conf .
 
 RUN pip3 install --upgrade pip && \
-    (cd /usr/local/geoss_search && pip3 install --prefix=/usr/local . && python3 setup.py clean -a)
+    (cd /usr/local/geoss_search && pip3 install --prefix=/usr/local -r requirements-production.txt && pip3 install --prefix=/usr/local . && python3 setup.py clean -a)
 
 USER fastapi
 CMD ["/usr/local/bin/docker-command.sh"]
 
 EXPOSE 8000
 EXPOSE 8443
+
+# TESTING Image
+FROM base as testing
+RUN apt-get update && apt-get install -y --no-install-recommends git-lfs && apt-get clean && \
+    git lfs install && git clone https://huggingface.co/sentence-transformers/paraphrase-MiniLM-L3-v2
+ENV MODEL_PATH="/paraphrase-MiniLM-L3-v2"
+RUN geoss_search init tests/test_data/geoss_open_resp.json --with-schema tests/test_data/schema.yml --force

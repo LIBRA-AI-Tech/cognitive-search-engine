@@ -3,7 +3,7 @@ import uvicorn
 import json
 import asyncio
 import warnings
-from typing import Optional, Iterator
+from typing import Optional, Iterator, Union
 from .model_inference import get_dims
 from .elastic import engine_connect, async_bulk
 from .settings import settings
@@ -131,8 +131,7 @@ async def _ingest(path: str, embeddings: str=None) -> None:
             await async_bulk(es, _load_json(path, embeddings=embeddings), index=settings.elastic_index)
         elif file.endswith('.parquet'):
             logging.info('Ingesting Parquet file ' + os.path.basename(file))
-            await async_bulk(es, _load_parquet(
-                path, embeddings=embeddings),
+            await async_bulk(es, _load_parquet(path, embeddings=embeddings),
                 index=settings.elastic_index,
                 raise_on_error=False,
                 raise_on_exception=False,
@@ -144,13 +143,14 @@ async def _ingest(path: str, embeddings: str=None) -> None:
             continue
     await es.close()
 
-async def _create_elastic_index(with_schema: Optional[str]=None, force: bool=False) -> bool:
+async def _create_elastic_index(index: str, with_schema: Optional[Union[str, dict]]=None, force: bool=False) -> bool:
     """Create an index to ElasticSearch
 
     Creates the index used by the service, the name of the index
     is determined in the configuration of the application.
 
-    with_schema (Optional[str], optional): A YAML file with schema information. Defaults to None.
+    index (str): Index name
+    with_schema (Optional[Union[str, dict]], optional): A mappings dictionary, or path of a YAML file with schema information. Defaults to None.
     force (bool, optional): When True, ingests data to ElasticSearch even if database is not empty
         (removes index before ingesting). Defaults to False.
 
@@ -159,15 +159,15 @@ async def _create_elastic_index(with_schema: Optional[str]=None, force: bool=Fal
     """
     es = engine_connect()
     if (not force):
-        if await es.indices.exists(index=settings.elastic_index):
-            logging.info(f"Index {settings.elastic_index} already exists.")
+        if await es.indices.exists(index=index):
+            logging.info(f"Index {index} already exists.")
             await es.close()
             return False
     else:
-        await es.indices.delete(index=settings.elastic_index, ignore=[400, 404])
-    mappings = _get_schema_mappings(with_schema=with_schema)
-    await es.indices.create(body=mappings, index=settings.elastic_index, ignore=[400, 404])
-    logging.info(f"Created index {settings.elastic_index}")
+        await es.indices.delete(index=index, ignore=[400, 404])
+    mappings = with_schema if isinstance(with_schema, dict) else _get_schema_mappings(with_schema=with_schema)
+    await es.indices.create(body=mappings, index=index, ignore=[400, 404])
+    logging.info(f"Created index {index}")
     await es.close()
     return True
 
@@ -176,8 +176,17 @@ async def _create_elastic_index(with_schema: Optional[str]=None, force: bool=Fal
 @click.option('--force', is_flag=True, default=False, help="Force index creation even in case index already exists (all data in the existing index will be lost!)")
 def create_elastic_index(**kwargs):
     """Initialize ElasticSearch by creating the elastic index."""
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(_create_elastic_index(**kwargs))
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(_create_elastic_index(settings.elastic_index, **kwargs))
+    properties = {
+        "started": {"type": "date"},
+        "finished": {"type": "date"},
+        "reset_index": {"type": "boolean"},
+        "records": {"type": "integer"},
+        "status": {"type": "keyword"} 
+    }
+    loop.run_until_complete(_create_elastic_index('ingest-jobs', with_schema={"mappings": {"properties": properties}}))
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
@@ -194,7 +203,7 @@ def ingest(path: str, **kwargs) -> None:
     reset = kwargs.pop('reset', False)
     with_schema = kwargs.pop('with_schema', None)
     if reset:
-        loop.run_until_complete(_create_elastic_index(force=reset, with_schema=with_schema))
+        loop.run_until_complete(_create_elastic_index(settings.elastic_index, force=reset, with_schema=with_schema))
     loop.run_until_complete(_ingest(path, **kwargs))
 
 if __name__ == "__main__":

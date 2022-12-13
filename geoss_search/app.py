@@ -1,17 +1,32 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, status, Depends, BackgroundTasks, Security
+from fastapi.exceptions import HTTPException
+from fastapi.security.api_key import APIKeyHeader
+from fastapi.concurrency import run_in_threadpool
 from datetime import datetime
 from typing import List, Optional
 import math
 import pygeos as pg
 import json
-import numpy as np
+import os
+import sys
+import secrets
+import asyncio
 from .settings import settings
-from .elastic import Aggregation, engine_connect, SemanticSearch, ExactSearch
-from .schemata.general import ListOfRecords, SearchResults, HealthResults, SourceSchema, RawMetadata, QueryMethod, SpatialPredicate, Attributes
+from .elastic import Aggregation, engine_connect, SemanticSearch, ExactSearch, Query as ElasticQuery
+from .schemata.general import ListOfRecords, SearchResults, HealthResults, SourceSchema, RawMetadata, QueryMethod, SpatialPredicate, Attributes, IngestBody
+from .cli import _create_elastic_index, _ingest
 from ._version import __version__
 
 es = engine_connect()
 app = FastAPI(title="GEOSS cognitive search API", description="GEOSS metadata catalog, supporting cognitive search", version=__version__)
+
+api_key_header = APIKeyHeader(name="api-key", auto_error=False)
+def api_key_auth(api_key: str=Security(api_key_header)):
+    if api_key != os.getenv('API_KEY'):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Forbidden"
+        )
 
 @app.on_event("shutdown")
 async def app_shutdown():
@@ -19,17 +34,18 @@ async def app_shutdown():
     await es.close()
 
 def _getFeatures(field):
+    if len(field) == 0:
+        return None
     id_, geom, group_id = field
     feature = {'type': 'Feature', 'id': id_}
     try:
-        geometry = json.loads(pg.to_geojson(pg.from_wkt(geom)))
+        geometry = json.loads(pg.to_geojson(pg.from_wkt(geom[0]))) if len(geom) > 0 else None
     except:
         geometry = None
     if geometry is not None:
         feature['geometry'] = geometry
     feature['properties'] = {'groupId': group_id}
     return feature
-_getFeatures = np.vectorize(_getFeatures, signature='(m)->()')
 
 def _parseElasticResponse(response: dict, **kwargs) -> dict:
     page = kwargs.pop('page', 1)
@@ -57,17 +73,16 @@ def _parseElasticResponse(response: dict, **kwargs) -> dict:
             {'term': values['source_title']['buckets'][0]['key'], 'freq': values.get('doc_count'), 'termId': values.get('key')} for values in properties['buckets']]
         for termtype, properties in response['aggregations'].items()
     }
-    geoms = np.array([
-        (inner_hit['_source']['id'], inner_hit['_source']['_geom'][0], hit['fields']['_group'][0]) 
+    geoms = [
+        (inner_hit['_source']['id'], inner_hit['_source']['_geom'], hit['fields']['_group'][0]) 
             for hit in response['hits']['hits'] 
             for inner_hit in hit['inner_hits']['grouped']['hits']['hits']
-    ])
-    features = _getFeatures(geoms)
-    geojson = {'type': 'FeatureCollection', 'features': features.tolist()}
+    ]
+    features = [_getFeatures(geom) for geom in geoms]
+    geojson = {'type': 'FeatureCollection', 'features': [] if features is None else features}
     return {'page': page, 'totalPages': totalPages, 'numberOfResults': numberOfResults, 'data': data, 'significantTerms': significantTerms, 'geoJson': geojson}
 
 @app.get('/search', response_model=SearchResults, summary="Perform a search on GEOSS metadata")
-@app.get('/search', summary="Perform a search on GEOSS metadata")
 async def search(
     query: str=Query(None, description="Query string for semantic or exact search (the method used is determined by the value of the `queryMethod` parameter). Search is performed in *title*, *description*, and *keyword* attributes of metadata. In case of exact search, multiple search terms are allowed, separated by `AND` or `OR`.", example="sustainability"),
     query_method: QueryMethod=Query("semantic", alias="queryMethod", title="Query Method", description="Determines the method applied to search for the query term(s) in metadata attributes."),
@@ -109,15 +124,19 @@ async def search(
 
     A GeoJSON with the geometries of all the records contained in the specific page. Information about the group that each record belongs to is contained in the properties of each feature.
     """
-    handler = SemanticSearch(es=es) if query_method == 'semantic' else ExactSearch(es=es)
-    handler = handler.query(query).page(page).recordsPerPage(records_per_page).minScore(min_score) \
+    if (query is not None):
+        handler = SemanticSearch(es=es) if query_method == 'semantic' else ExactSearch(es=es)
+        handler = handler.query(query)
+    else:
+        handler = ElasticQuery(es=es)
+    handler = handler.page(page).recordsPerPage(records_per_page).minScore(min_score) \
         .fields(["title", "description", "origOrgId", "origOrgDesc"]) \
         ._source("false") \
         .collapse({
             "field": "_group",
             "inner_hits": {
                 "name": "grouped",
-                "size": 1,
+                "size": 10000,
                 "_source": ["id", "_geom"]
             }
         })
@@ -153,19 +172,57 @@ async def search(
 @app.get('/sources', response_model=List[SourceSchema], summary="Retrieve available sources list")
 async def sources():
     """Fetch a list of all available sources of GEOSS metadata"""
+    agg = Aggregation()
+    agg.add("source", "terms", "source.id", size=10000)
+    agg.add("sourceTitle", "terms", "source.title", size=1)
+    handler = ElasticQuery(es=es).aggs(agg)._source("false").size(0)
+    response = await handler.exec()
+
+    return [{"id": r['key'], "title": r['sourceTitle']['buckets'][0]['key']} for r in response['aggregations']['source']['buckets']]
 
 @app.get('/raw', response_model=RawMetadata, summary="Retrieve raw metadata for specific record")
 async def raw(
     id: str=Query(..., description="Resource id"),
 ):
     """Get raw metadata for a specific record, given its ID"""
+    handler = ElasticQuery(es=es)
+    handler = handler.query({
+        "bool": {
+            "must": [{
+                "match": {"id": id}
+            }]
+        }
+    })
+    handler = handler._source({"excludes": ["_*"]})
+    response = await handler.exec()
 
-@app.get('/metadata', response_model=ListOfRecords, summary="Retrieve metadata for a list of record IDs")
+    if len(response['hits']['hits']) == 0:
+        return None
+    return response['hits']['hits'][0]['_source']
+
+@app.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(
     ids: str=Query(..., description="A comma separated list of resource IDs"),
     attributes: Optional[List[Attributes]]=Query(['id', 'title', 'description', 'source', 'online', 'keyword'], description="List of attributes that will be included in the response.")
 ):
     """Get metadata for a comma separated list of records, given their IDs"""
+    id_array = ids.split(',')
+    handler = ElasticQuery(es=es)
+    handler = handler.query({
+        "bool": {
+            "should": [{"match": {"id": id}} for id in id_array]
+        }
+    })
+    handler = handler._source({"includes": attributes})
+    handler = handler.fields(["_geom"])
+
+    response = await handler.exec()
+    total = response['hits']['total']['value']
+    geoms = [json.dumps(record.get('fields', {}).get('_geom', [None])[0]) for record in response['hits']['hits']]
+    bbox = pg.bounds(pg.union_all(pg.from_geojson(geoms))).tolist() if len(geoms) > 0 else None
+    records = [record.get('_source') for record in response['hits']['hits']]
+
+    return {"total": total, "bbox": bbox, "records": records}
 
 @app.get('/health', response_model=HealthResults, summary="Service health")
 async def health():
@@ -182,3 +239,41 @@ async def health():
     if not index_exists:
         return {"status": "FAILED", "details": "Index `{}` does not exist in search engine".format(settings.elastic_index), "message": ""}
     return {"status": "OK", "details": "", "message": "System is running healthy"}
+
+def _ingest_task(token: str, path: str, embeddings: str, reset: bool):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    es = engine_connect()
+    try:
+        if (reset):
+            loop.run_until_complete(_create_elastic_index(force=reset, index=settings.elastic_index, with_schema=os.getenv('INIT_DATA_SCHEMA')))
+        loop.run_until_complete(_ingest(path, embeddings=embeddings))
+        loop.run_until_complete(run_in_threadpool(_ingest, path, embeddings=embeddings))
+        loop.run_until_complete(es.update(index='ingest-jobs', id=token, body={"doc": {"status": "success", "finished": datetime.now().isoformat()}}))
+    except Exception as e:
+        loop.run_until_complete(es.update(index='ingest-jobs', id=token, body={"doc": {"status": "failed", "finished": datetime.now().isoformat()}}))
+    finally:
+        loop.run_until_complete(es.close())
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
+
+@app.post('/ingest', dependencies=[Depends(api_key_auth)], summary="Ingest data into ElasticSearch", status_code=202)
+async def ingest(ingestBody: IngestBody, background_tasks: BackgroundTasks):
+    # IMPORTANT
+    # Minimal solution, it will fail in cluster environment
+    active_jobs = await ElasticQuery(es=es, index="ingest-jobs").query({"terms": {"status": ["active"]}})._source(False).exec()
+    if active_jobs.get('hits').get('total', {}).get('value', 0) > 0:
+        return {"message": "An ingest task is already running"}
+    response = await es.index(index='ingest-jobs', body={"started": datetime.now().isoformat(), "status": "active", "reset_index": ingestBody.reset})
+    token = response.get('_id')
+    background_tasks.add_task(_ingest_task, token, ingestBody.path, ingestBody.embeddings, ingestBody.reset)
+    return {"token": token, "url": f"/task/{token}"}
+
+@app.get('/task/{token}', dependencies=[Depends(api_key_auth)], summary="Get task info")
+async def get_task_info(token: str):
+    details = await ElasticQuery(es=es, index="ingest-jobs").query({"ids": {"values": [token]}}).exec()
+    details = details['hits']['hits']
+    if len(details) == 0:
+        return None
+    details = details[0].get('_source', {})
+    return details
