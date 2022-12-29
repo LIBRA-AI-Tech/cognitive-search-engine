@@ -50,7 +50,8 @@ services:
     ports:
       - ${KIBANA_PORT}:5601
     environment:
-      - SERVERNAME=kibana
+      - SERVERNAME=${KIBANA_SERVERNAME}
+      - SERVER_PUBLICBASEURL=${KIBANA_PUBLICBASEURL}
       - ELASTICSEARCH_HOSTS=https://es01:9200
       - ELASTICSEARCH_USERNAME=kibana_system
       - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
