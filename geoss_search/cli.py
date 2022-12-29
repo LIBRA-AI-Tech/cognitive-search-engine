@@ -1,15 +1,17 @@
+import os
+import logging
 import click
 import uvicorn
 import json
 import asyncio
 import warnings
 from typing import Optional, Iterator, Union
+from time import perf_counter
+from elasticsearch import AsyncElasticsearch
 from .model_inference import get_dims
 from .elastic import engine_connect, async_bulk
 from .settings import settings
-from .enrich import enrich, bulk_predict, group_dataframe
-import logging
-import os
+from .enrich import enrich, bulk_predict
 
 logging.basicConfig(level=logging.INFO)
 logging.getLogger("elastic_transport.transport").setLevel(logging.WARNING)
@@ -45,14 +47,53 @@ async def _load_json(filename: str, **kwargs) -> Iterator[dict]:
         filename (str): Path of the JSON file (with filename)
 
     Yields:
-        dict: Erniched entry
+        dict: Enriched entry
     """
     from tqdm import tqdm
     with open(filename, 'r') as open_file:
         for report in tqdm(json.load(open_file).get('reports')):
             yield enrich(report, **kwargs)
 
-async def _load_parquet(filename: str, **kwargs) -> Iterator[dict]:
+class Cache:
+    """Auxiliary class to cache DataFrame groups"""
+
+    def __init__(self) -> None:
+        self._cache = {}
+
+    def get(self, src: str, title: str, desc: str) -> Optional[str]:
+        """Get the group of a record
+
+        Args:
+            src (str): Source organization
+            title (str): Title
+            desc (str): Description
+
+        Returns:
+            Optional[str]: Group identifier if group exists; None otherwise
+        """
+        cache = self._cache
+        if src in cache and title in cache[src] and desc in cache[src][title]:
+            return cache[src][title][desc]
+        return None
+
+    def update(self, src: str, title: str, desc: str, value: str) -> None:
+        """Update information with a new record
+
+        Args:
+            src (str): Source organization
+            title (str): Title
+            desc (str): Description
+            value (str): Group identifier
+        """
+        if src in self._cache:
+            if title in self._cache[src]:
+                self._cache[src][title][desc] = value
+            else:
+                self._cache[src][title] = {desc: value}
+        else:
+            self._cache[src] = {src: {title: {desc: value}}}
+
+async def _load_parquet(es: AsyncElasticsearch, filename: str, **kwargs) -> Iterator[dict]:
     """Load a parquet file into a Pandas DataFrame
 
     Args:
@@ -62,13 +103,53 @@ async def _load_parquet(filename: str, **kwargs) -> Iterator[dict]:
         Iterator[dict]: Dictionary represantation of each record (row).
     """
     import pandas as pd
+    from uuid import uuid4
     from tqdm import tqdm
     df = pd.read_parquet(filename)
-    logging.info("Grouping DataFrame, this might take some time...")
-    df = group_dataframe(df)
     df = bulk_predict(df, **kwargs)
-    for index, row in tqdm(df.iterrows(), total=len(df)):
-        yield row.to_dict()
+    cache = Cache()
+    for index, row in df.iterrows():
+        record = row.to_dict()
+        src = row.source['id']
+        title = row.title
+        desc = row.description
+        group = cache.get(src, title, desc)
+        if group is not None:
+            record['_group'] = group
+        else:
+            query = {
+                "bool": {
+                    "filter": [
+                        {
+                            "match_phrase": { "title": title }
+                        },
+                        {
+                            "term": { "source.id": src }
+                        }
+                    ]
+                }
+            }
+            if desc is not None:
+                query['bool']['filter'].append({"match_phrase": {"description": desc}})
+            else:
+                query['bool']['filter'].append({"bool": {"must_not": {"exists": {"field": "description"}}}})
+            try:
+                result = await es.search(
+                    index=settings.elastic_index,
+                    query=query,
+                    source=['_group'],
+                    size=1
+                )
+            except Exception as e:
+                logging.warn(query)
+                raise e
+            try:
+                group = result['hits']['hits'][0]['_source']['_group']
+            except IndexError:
+                group = str(uuid4())
+            cache.update(src, title, desc, group)
+            record["_group"] = group
+        yield record
 
 def _get_schema_mappings(with_schema: Optional[str]=None) -> dict:
     """Retrieve the Elastic schema according to the given definition, enriched by the required fields
@@ -131,13 +212,20 @@ async def _ingest(path: str, embeddings: str=None) -> None:
             await async_bulk(es, _load_json(path, embeddings=embeddings), index=settings.elastic_index)
         elif file.endswith('.parquet'):
             logging.info('Ingesting Parquet file ' + os.path.basename(file))
-            await async_bulk(es, _load_parquet(path, embeddings=embeddings),
-                index=settings.elastic_index,
-                raise_on_error=False,
-                raise_on_exception=False,
-                max_retries=100,
-                request_timeout=360
-            )
+            try:
+                st = perf_counter()
+                await async_bulk(es, _load_parquet(es, path, embeddings=embeddings),
+                    index=settings.elastic_index,
+                    raise_on_error=False,
+                    raise_on_exception=False,
+                    max_retries=100,
+                    request_timeout=360
+                )
+                ingest_time = perf_counter() - st
+                logging.info(f"Ingested Parquet in {ingest_time} s")
+            except Exception as e:
+                logging.exception("Ingest failed")
+                raise e
         else:
             logging.info(f'{os.path.basename(file)} type is not supported.')
             continue
