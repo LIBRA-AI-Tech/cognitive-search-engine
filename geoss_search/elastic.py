@@ -101,6 +101,11 @@ class Query:
         return self
 
     def bbox(self, bbox: List[float], predicate: str="overlaps") -> Self:
+        predicates = {
+            'contains': 'WITHIN',
+            'overlaps': 'INTERSECTS',
+            'disjoint': 'DISJOINT',
+        }
         filter = {
             "geo_shape": {
                 "_geom": {
@@ -108,7 +113,7 @@ class Query:
                         "type": "envelope",
                         "coordinates": [bbox[:2], bbox[2:]]
                     },
-                    "relation": predicate
+                    "relation": predicates[predicate]
                 }
             }
         }
