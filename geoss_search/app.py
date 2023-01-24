@@ -89,7 +89,7 @@ async def search(
     min_score: float=Query(0, alias="minScore", title="Minimum Score", description="Only results with a relevance score larger than this value will be included to the response."),
     page: int=Query(1, description="Requested page of results"),
     records_per_page: int=Query(10, alias="recordsPerPage", description="Number of groups returned in each page", le=100),
-    bbox: str=Query(None, title="Bounding Box", description="[**FILTER**] A bounding box (expressed in EPSG:4326); comma separated list of (float) values: west,south,east,north", example="-11.5,35.3,43.2,81.4"),
+    bbox: str=Query(None, title="Bounding Box", description="[**FILTER**] A bounding box (expressed in EPSG:4326); comma separated list of (float) values: west,south,east,north", example="-11.5,35.3,43.2,81.4", regex="^[\-]{0,1}[0-9]{1,2}[\.]*[0-9]*,[\-]{0,1}[0-9]{1,2}[\.]*[0-9]*,[\-]{0,1}[0-9]{1,2}[\.]*[0-9]*,[\-]{0,1}[0-9]{1,2}[\.]*[0-9]*$"),
     spatial_predicate: SpatialPredicate=Query("overlaps", alias="spatialPredicate", title="Spatial predicate", description="Spatial bounding box predicate."),
     sources: str=Query(None, description="[**FILTER**] Comma separated list of DAB sources identifiers; only records come from these sources will be included.", example="copernicuscamsid"),
     time_start: datetime=Query(None, alias="timeStart", title="Time start", description="[**FILTER**] Date or datetime expressed in ISO8601 format; only records with a time extend **after** this date will be included", examples={"date": {"value": "2018-01-01", "summary": "Date only"}, "datetime": {"value": "2018-01-01T00:00:00Z", "summary": "Datetime"}}),
@@ -141,7 +141,7 @@ async def search(
             }
         })
     if bbox is not None:
-        handler = handler.bbox(bbox, predicate=spatial_predicate)
+        handler = handler.bbox(bbox.split(','), predicate=spatial_predicate)
     if time_start is not None or time_end is not None:
         handler = handler.between(from_=time_start, to_=time_end)
 
