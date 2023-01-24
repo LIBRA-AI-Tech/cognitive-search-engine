@@ -111,7 +111,7 @@ class Query:
                 "_geom": {
                     "shape": {
                         "type": "envelope",
-                        "coordinates": [bbox[:2], bbox[2:]]
+                        "coordinates": [[float(bbox[0]), float(bbox[3])], [float(bbox[2]), float(bbox[1])]]
                     },
                     "relation": predicates[predicate]
                 }
@@ -210,7 +210,7 @@ class SemanticSearch(Query):
                 "query_vector": predict(self.query_),
                 "k": 10000,
                 "num_candidates": 10000,
-                "filter": self.filter_
+                "filter": self.filter_,
             }
             self.query_ = None
         return super().parse()
@@ -218,14 +218,26 @@ class SemanticSearch(Query):
 class ExactSearch(Query):
 
     def parse(self) -> dict:
+        match_phrase = {
+            "query": self.query_,
+            "slop": 1,
+            "analyzer": "standard",
+            "zero_terms_query": "none"
+        }
         self.query_ = {
-            "match_phrase": {
-                "description": {
-                    "query": self.query_,
-                    "slop": 1,
-                    "analyzer": "standard",
-                    "zero_terms_query": "none"
-                }
+            "bool": {
+                "should": [
+                    {
+                        "match_phrase": {
+                            "title": match_phrase
+                        },
+                        "match_phrase": {
+                            "description": match_phrase
+                        }
+                    }
+                ],
+                "filter": self.filter_,
+                "minimum_should_match": 1,
             }
         }
         return super().parse()
