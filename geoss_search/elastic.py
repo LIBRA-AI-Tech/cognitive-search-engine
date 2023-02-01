@@ -106,12 +106,13 @@ class Query:
             'overlaps': 'INTERSECTS',
             'disjoint': 'DISJOINT',
         }
+        xmin, ymin, xmax, ymax = bbox
         filter = {
             "geo_shape": {
                 "_geom": {
                     "shape": {
                         "type": "envelope",
-                        "coordinates": [[float(bbox[0]), float(bbox[3])], [float(bbox[2]), float(bbox[1])]]
+                        "coordinates": [[xmin, ymax], [xmax, ymin]]
                     },
                     "relation": predicates[predicate]
                 }
