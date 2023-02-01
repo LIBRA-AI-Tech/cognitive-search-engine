@@ -10,17 +10,13 @@ RUN apt-get update && \
     apt-get clean
 
 COPY requirements.txt requirements-production.txt ./
-RUN pip3 install --upgrade pip wheel && \
-    pip3 install --prefix=/usr/local -r requirements.txt
+RUN pip3 --no-cache-dir install --upgrade pip wheel && \
+    pip3 --no-cache-dir install --prefix=/usr/local -r requirements.txt
 
 # BASE Image
 FROM python:3.8-slim-bullseye as base
 
 ARG VERSION
-
-LABEL language="python"
-LABEL framework="fastapi"
-LABEL usage="Full text search on GEOSS metadata"
 
 ENV VERSION="${VERSION}"
 ENV PYTHON_VERSION="3.8"
@@ -30,6 +26,10 @@ COPY --from=build-stage-1 /usr/local /usr/local
 
 # PRODUCTION Image
 FROM base as production
+
+LABEL language="python"
+LABEL framework="fastapi"
+LABEL usage="Full text search on GEOSS metadata"
 
 RUN mkdir /usr/local/geoss_search/
 COPY setup.py README.md requirements-production.txt /usr/local/geoss_search/
@@ -46,8 +46,8 @@ WORKDIR /var/local/geoss_search
 RUN mkdir ./logs && chown fastapi: ./logs
 COPY --chown=fastapi logging.conf .
 
-RUN pip3 install --upgrade pip && \
-    (cd /usr/local/geoss_search && pip3 install --prefix=/usr/local -r requirements-production.txt && pip3 install --prefix=/usr/local . && python3 setup.py clean -a)
+RUN pip3 --no-cache-dir install --upgrade pip && \
+    (cd /usr/local/geoss_search && pip3 --no-cache-dir install --prefix=/usr/local -r requirements-production.txt && pip3 --no-cache-dir install --prefix=/usr/local . && python3 setup.py clean -a)
 
 USER fastapi
 CMD ["/usr/local/bin/docker-command.sh"]
