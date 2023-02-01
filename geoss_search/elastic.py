@@ -125,7 +125,7 @@ class Query:
         if from_ is not None:
             filter = {
                 "range": {
-                    "when.from": {
+                    "when.to": {
                         "gte": from_.isoformat()
                     }
                 }
@@ -134,7 +134,7 @@ class Query:
         if to_ is not None:
             filter = {
                 "range": {
-                    "when.to": {
+                    "when.from": {
                         "lte": to_.isoformat()
                     }
                 }
