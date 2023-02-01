@@ -48,7 +48,7 @@ def _getFeatures(field):
 
 def _parseElasticResponse(response: dict, **kwargs) -> dict:
     page = kwargs.pop('page', 1)
-    totalPages = math.ceil(response['hits']['total']['value'] / kwargs.pop('records_per_page', 10))
+    totalPages = math.ceil(response['aggregations']['group_number']['value'] / kwargs.pop('records_per_page', 10))
     numberOfResults = response['hits']['total']['value']
     data = [{
         'groupId': hit['fields']['_group'][0],
@@ -69,7 +69,7 @@ def _parseElasticResponse(response: dict, **kwargs) -> dict:
                 if terms_significance else
             {'term': values.get('key'), 'freq': values.get('doc_count')}
                 if termtype != 'source' else
-            {'term': values['source_title']['buckets'][0]['key'], 'freq': values.get('doc_count'), 'termId': values.get('key')} for values in properties['buckets']]
+            {'term': values.get('source_title', {}).get('buckets', [{}])[0].get('key'), 'freq': values.get('doc_count'), 'termId': values.get('key')} for values in properties.get('buckets', [])]
         for termtype, properties in response['aggregations'].items()
     }
     geoms = [
@@ -143,7 +143,8 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
         if name == 'source':
             agg.add('source_title', 'terms', 'source.title', size=1)
         handler = handler.aggs(agg)
-    agg = Aggregation().add('group_number', 'cardinality', '_group')
+    agg = Aggregation()
+    agg.add('group_number', 'cardinality', '_group')
     handler = handler.aggs(agg)
 
     response = await handler.exec()

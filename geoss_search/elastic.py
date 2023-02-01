@@ -178,7 +178,7 @@ class Query:
     def parse(self) -> dict:
         payload = self._payload
 
-        if self.query_ is not None and self.min_score is not None:
+        if self.min_score is not None:
             payload["min_score"] = self.min_score
         if self.query_ is not None:
             payload["query"] = self.query_
