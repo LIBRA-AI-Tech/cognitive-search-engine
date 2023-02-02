@@ -13,8 +13,10 @@ from .settings import settings
 from .elastic import Aggregation, engine_connect, SemanticSearch, ExactSearch, Query as ElasticQuery
 from .schemata.general import ListOfRecords, SearchResults, HealthResults, SourceSchema, RawMetadata, Attributes, IngestBody
 from .schemata.query import QueryModel
+from .schemata.augmented import Augmented
 from .cli import _create_elastic_index, _ingest
 from ._version import __version__
+from .augmented_metadata import augmented_metadata
 
 es = engine_connect()
 app = FastAPI(
@@ -186,6 +188,13 @@ async def raw(
     if len(response['hits']['hits']) == 0:
         return None
     return response['hits']['hits'][0]['_source']
+
+@app.get('/augmented', response_model=Augmented, summary="Retrieve augmented metadata for specific record")
+async def raw(
+    id: str=Query(..., description="Resource id"),
+):
+    """Get augmented metadata for a specific record, given its ID"""
+    return augmented_metadata.get(id, {})
 
 @app.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(
