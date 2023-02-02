@@ -15,7 +15,6 @@ from .schemata.general import ListOfRecords, SearchResults, HealthResults, Sourc
 from .schemata.query import QueryModel
 from .cli import _create_elastic_index, _ingest
 from ._version import __version__
-from .augmented_metadata import augmented_metadata
 
 es = engine_connect()
 app = FastAPI(
