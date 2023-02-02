@@ -15,9 +15,15 @@ from .schemata.general import ListOfRecords, SearchResults, HealthResults, Sourc
 from .schemata.query import QueryModel
 from .cli import _create_elastic_index, _ingest
 from ._version import __version__
+from .augmented_metadata import augmented_metadata
 
 es = engine_connect()
-app = FastAPI(title="GEOSS cognitive search API", description="GEOSS metadata catalog, supporting cognitive search", version=__version__)
+app = FastAPI(
+    title="GEOSS cognitive search API",
+    description="GEOSS metadata catalog, supporting cognitive search",
+    version=__version__,
+    root_path=os.getenv('ROOT_PATH', '/')
+)
 
 api_key_header = APIKeyHeader(name="api-key", auto_error=False)
 def api_key_auth(api_key: str=Security(api_key_header)):
