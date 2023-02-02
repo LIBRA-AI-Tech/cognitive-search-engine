@@ -56,8 +56,8 @@ def _parseElasticResponse(response: dict, **kwargs) -> dict:
         'members': [member['_source']['id'] for member in hit['inner_hits']['grouped']['hits']['hits']],
         'title': hit['fields'].get('title', [''])[0],
         'description': hit['fields'].get('description', [''])[0],
-        'origOrgId': hit['fields'].get('origOrgId', [''])[0],
-        'origOrgDesc': hit['fields'].get('origOrgDesc', [''])[0],
+        'origOrgId': hit['fields'].get('source.id', [''])[0],
+        'origOrgDesc': hit['fields'].get('source.title', [''])[0],
         'score': hit['_score']
     } for hit in response['hits']['hits']]
     terms_significance = kwargs.pop('terms_significance', False)
@@ -111,7 +111,7 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
     else:
         handler = ElasticQuery(es=es)
     handler = handler.page(params.page).recordsPerPage(params.records_per_page).minScore(params.min_score) \
-        .fields(["title", "description", "origOrgId", "origOrgDesc"]) \
+        .fields(["title", "description", "source.id", "source.title"]) \
         ._source("false") \
         .collapse({
             "field": "_group",
