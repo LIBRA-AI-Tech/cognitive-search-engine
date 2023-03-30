@@ -61,3 +61,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends git-lfs && apt-
     git lfs install && git clone https://huggingface.co/sentence-transformers/paraphrase-MiniLM-L3-v2
 ENV MODEL_PATH="/paraphrase-MiniLM-L3-v2"
 RUN geoss_search init tests/test_data/geoss_open_resp.json --with-schema tests/test_data/schema.yml --force
+
+# REDIS setup
+FROM base as redis-setup
+
+COPY redis-model-store.py /usr/local/bin/modelstore
+RUN chmod +x /usr/local/bin/modelstore
