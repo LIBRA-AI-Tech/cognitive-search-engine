@@ -1,20 +1,19 @@
-from fastapi import FastAPI, Query, status, Depends, BackgroundTasks, Security, Depends
+from fastapi import FastAPI, Query, status, Depends, Security, Depends
 from fastapi.exceptions import HTTPException
 from fastapi.security.api_key import APIKeyHeader
-from fastapi.concurrency import run_in_threadpool
 from datetime import datetime
 from typing import List, Optional
 import math
 import pygeos as pg
 import json
 import os
-import asyncio 
+import redis
 from .settings import settings
 from .elastic import Aggregation, engine_connect, SemanticSearch, ExactSearch, Query as ElasticQuery
 from .schemata.general import ListOfRecords, SearchResults, HealthResults, SourceSchema, RawMetadata, Attributes, IngestBody
 from .schemata.query import QueryModel
 from .schemata.augmented import Augmented
-from .cli import _create_elastic_index, _ingest
+from .tasks import ingest_data_task
 from ._version import __version__
 from .augmented_metadata import augmented_metadata
 
@@ -25,6 +24,7 @@ app = FastAPI(
     version=__version__,
     root_path=os.getenv('ROOT_PATH', '/')
 )
+redis_pool = redis.ConnectionPool(host='redisai', port=6379, db=0)
 
 api_key_header = APIKeyHeader(name="api-key", auto_error=False)
 def api_key_auth(api_key: str=Security(api_key_header)):
@@ -236,33 +236,12 @@ async def health():
         return {"status": "FAILED", "details": "Index `{}` does not exist in search engine".format(settings.elastic_index), "message": ""}
     return {"status": "OK", "details": "", "message": "System is running healthy"}
 
-def _ingest_task(token: str, path: str, embeddings: str, reset: bool):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    es = engine_connect()
-    try:
-        if (reset):
-            loop.run_until_complete(_create_elastic_index(force=reset, index=settings.elastic_index, with_schema=os.getenv('INIT_DATA_SCHEMA')))
-        loop.run_until_complete(_ingest(path, embeddings=embeddings))
-        loop.run_until_complete(run_in_threadpool(_ingest, path, embeddings=embeddings))
-        loop.run_until_complete(es.update(index='ingest-jobs', id=token, body={"doc": {"status": "success", "finished": datetime.now().isoformat()}}))
-    except Exception as e:
-        loop.run_until_complete(es.update(index='ingest-jobs', id=token, body={"doc": {"status": "failed", "finished": datetime.now().isoformat()}}))
-    finally:
-        loop.run_until_complete(es.close())
-        loop.run_until_complete(loop.shutdown_asyncgens())
-        loop.close()
-
 @app.post('/ingest', dependencies=[Depends(api_key_auth)], summary="Ingest data into ElasticSearch", status_code=202)
-async def ingest(ingestBody: IngestBody, background_tasks: BackgroundTasks):
-    # IMPORTANT
-    # Minimal solution, it will fail in cluster environment
-    active_jobs = await ElasticQuery(es=es, index="ingest-jobs").query({"terms": {"status": ["active"]}})._source(False).exec()
-    if active_jobs.get('hits').get('total', {}).get('value', 0) > 0:
-        return {"message": "An ingest task is already running"}
-    response = await es.index(index='ingest-jobs', body={"started": datetime.now().isoformat(), "status": "active", "reset_index": ingestBody.reset})
+async def ingest(ingestBody: IngestBody):
+    elastic_index = settings.elastic_index if ingestBody.elastic_index is None else ingestBody.elastic_index
+    response = await es.index(index='ingest-jobs', body={"started": datetime.now().isoformat(), "status": "pending", "elastic_index": elastic_index})
     token = response.get('_id')
-    background_tasks.add_task(_ingest_task, token, ingestBody.path, ingestBody.embeddings, ingestBody.reset)
+    ingest_data_task.apply_async((ingestBody.path, ingestBody.embeddings, elastic_index), task_id=token)
     return {"token": token, "url": f"/task/{token}"}
 
 @app.get('/task/{token}', dependencies=[Depends(api_key_auth)], summary="Get task info")
