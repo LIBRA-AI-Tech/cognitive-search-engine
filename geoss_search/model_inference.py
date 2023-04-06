@@ -5,7 +5,6 @@ from redisai import Client
 from transformers import AutoTokenizer
 
 from sentence_transformers import SentenceTransformer
-from sentence_transformers.LoggingHandler import install_logger
 from typing import List, Union
 import numpy as np
 from .settings import settings
@@ -73,6 +72,7 @@ class ModelInference:
         Returns:
             int: Number of dimensions
         """
+        # TODO
         return 384
 
 def predict(text: str) -> ModelInference.encode:

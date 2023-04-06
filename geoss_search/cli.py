@@ -3,13 +3,12 @@ import logging
 import click
 import uvicorn
 import json
-import asyncio
 import warnings
 from typing import Optional, Iterator, Union
 from time import perf_counter
-from elasticsearch import AsyncElasticsearch
+from elasticsearch import Elasticsearch
+from elasticsearch.helpers import bulk 
 from .model_inference import get_dims
-from .elastic import engine_connect, async_bulk
 from .settings import settings
 from .enrich import enrich, bulk_predict
 
@@ -93,10 +92,15 @@ class Cache:
         else:
             self._cache[src] = {src: {title: {desc: value}}}
 
-async def _load_parquet(es: AsyncElasticsearch, filename: str, **kwargs) -> Iterator[dict]:
+def load_parquet(es: Elasticsearch, elastic_index: str, filename: str, **kwargs) -> Iterator[dict]:
     """Load a parquet file into a Pandas DataFrame
 
+    An additional attribute `group` is added in the DataFrame, which is populated with a
+    uuid value, indicating the same groups in the dataset.
+
     Args:
+        es (elasticsearch.Elasticsearch): Elasticsearch engine
+        elastic_index (str): Elastic index of the data
         filename (str): Path of the parquet file.
 
     Yields:
@@ -104,11 +108,10 @@ async def _load_parquet(es: AsyncElasticsearch, filename: str, **kwargs) -> Iter
     """
     import pandas as pd
     from uuid import uuid4
-    from tqdm import tqdm
     df = pd.read_parquet(filename)
     df = bulk_predict(df, **kwargs)
     cache = Cache()
-    for index, row in df.iterrows():
+    for _, row in df.iterrows():
         record = row.to_dict()
         src = row.source['id']
         title = row.title
@@ -134,8 +137,8 @@ async def _load_parquet(es: AsyncElasticsearch, filename: str, **kwargs) -> Iter
             else:
                 query['bool']['filter'].append({"bool": {"must_not": {"exists": {"field": "description"}}}})
             try:
-                result = await es.search(
-                    index=settings.elastic_index,
+                result = es.search(
+                    index=elastic_index,
                     query=query,
                     source=['_group'],
                     size=1
@@ -191,36 +194,36 @@ def _get_schema_mappings(with_schema: Optional[str]=None) -> dict:
         }
     }        
 
-async def _ingest(path: str, embeddings: str=None) -> None:
+def _ingest(es, path: str, elastic_index: str, embeddings: str=None) -> None:
     """Ingest data to elastic search
 
     Args:
         path (str): Path of data file(s); JSON and parquet files are supported.
+        elastic_index (str): Elastic index that data will be ingested
         embeddings (str): Name of the embedding attribute in data file; when omitted, embedding of each record will be computed.
     """
-    es = engine_connect()
-
     if not os.path.exists(path):
         raise ValueError(f'{path} does not exist.')
 
     files = [os.path.join(path, file) for file in os.listdir(path)] if os.path.isdir(path) else [path]
     for file in files:
         if os.path.isdir(file):
-            await _ingest(file, embeddings=embeddings)
+            _ingest(file, elastic_index, embeddings=embeddings)
         if file.endswith('.json'):
             logging.info('Ingesting JSON file ' + os.path.basename(file))
-            await async_bulk(es, _load_json(path, embeddings=embeddings), index=settings.elastic_index)
+            bulk(es, _load_json(path, embeddings=embeddings), index=elastic_index)
         elif file.endswith('.parquet'):
             logging.info('Ingesting Parquet file ' + os.path.basename(file))
             try:
                 st = perf_counter()
-                await async_bulk(es, _load_parquet(es, path, embeddings=embeddings),
-                    index=settings.elastic_index,
+                info = bulk(es, load_parquet(es, elastic_index, path, embeddings=embeddings),
+                    index=elastic_index,
                     raise_on_error=False,
                     raise_on_exception=False,
                     max_retries=100,
                     request_timeout=360
                 )
+                logging.info("Bulk result: %s", info)
                 ingest_time = perf_counter() - st
                 logging.info(f"Ingested Parquet in {ingest_time} s")
             except Exception as e:
@@ -229,9 +232,8 @@ async def _ingest(path: str, embeddings: str=None) -> None:
         else:
             logging.info(f'{os.path.basename(file)} type is not supported.')
             continue
-    await es.close()
 
-async def _create_elastic_index(index: str, with_schema: Optional[Union[str, dict]]=None, force: bool=False) -> bool:
+def _create_elastic_index(es, index: str, with_schema: Optional[Union[str, dict]]=None, force: bool=True) -> bool:
     """Create an index to ElasticSearch
 
     Creates the index used by the service, the name of the index
@@ -245,18 +247,15 @@ async def _create_elastic_index(index: str, with_schema: Optional[Union[str, dic
     Returns:
         bool: True when index is created; False otherwise (i.e. index already exists and force is False).
     """
-    es = engine_connect()
     if (not force):
-        if await es.indices.exists(index=index):
+        if es.indices.exists(index=index):
             logging.info(f"Index {index} already exists.")
-            await es.close()
             return False
     else:
-        await es.indices.delete(index=index, ignore=[400, 404])
+        es.indices.delete(index=index, ignore=[400, 404])
     mappings = with_schema if isinstance(with_schema, dict) else _get_schema_mappings(with_schema=with_schema)
-    await es.indices.create(body=mappings, index=index, ignore=[400, 404])
+    es.indices.create(body=mappings, index=index, ignore=[400, 404])
     logging.info(f"Created index {index}")
-    await es.close()
     return True
 
 @cli.command()
@@ -264,17 +263,22 @@ async def _create_elastic_index(index: str, with_schema: Optional[Union[str, dic
 @click.option('--force', is_flag=True, default=False, help="Force index creation even in case index already exists (all data in the existing index will be lost!)")
 def create_elastic_index(**kwargs):
     """Initialize ElasticSearch by creating the elastic index."""
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(_create_elastic_index(settings.elastic_index, **kwargs))
+    es = Elasticsearch(
+        os.getenv("ELASTIC_NODE"),
+        ca_certs=os.path.join(os.getenv('CA_CERTS'), 'ca.crt'),
+        basic_auth=("elastic", os.getenv('ELASTIC_PASSWORD')),
+        request_timeout=360,
+    )
+    _create_elastic_index(es, settings.elastic_index, **kwargs)
     properties = {
         "started": {"type": "date"},
         "finished": {"type": "date"},
         "reset_index": {"type": "boolean"},
         "records": {"type": "integer"},
-        "status": {"type": "keyword"} 
+        "status": {"type": "keyword"},
+        "progress": {"type": "string"},
     }
-    loop.run_until_complete(_create_elastic_index('ingest-jobs', with_schema={"mappings": {"properties": properties}}))
+    _create_elastic_index(es, 'ingest-jobs', with_schema={"mappings": {"properties": properties}})
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
@@ -287,12 +291,17 @@ def ingest(path: str, **kwargs) -> None:
     Args:
         path (str): Path to data file(s)
     """
-    loop = asyncio.get_event_loop()
+    es = Elasticsearch(
+        os.getenv("ELASTIC_NODE"),
+        ca_certs=os.path.join(os.getenv('CA_CERTS'), 'ca.crt'),
+        basic_auth=("elastic", os.getenv('ELASTIC_PASSWORD')),
+        request_timeout=360,
+    )
     reset = kwargs.pop('reset', False)
     with_schema = kwargs.pop('with_schema', None)
     if reset:
-        loop.run_until_complete(_create_elastic_index(settings.elastic_index, force=reset, with_schema=with_schema))
-    loop.run_until_complete(_ingest(path, **kwargs))
+        _create_elastic_index(es, settings.elastic_index, force=reset, with_schema=with_schema)
+    _ingest(es, path, **kwargs)
 
 if __name__ == "__main__":
     cli()

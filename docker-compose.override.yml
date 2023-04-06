@@ -11,7 +11,7 @@ services:
       target: "base"
       args:
         VERSION: "${VERSION}"
-    command: sh -c "python3 -m pip install --prefix=/usr/local -e . && geoss_search create-elastic-index && exec uvicorn --host 0.0.0.0 --port 8000 geoss_search:app --reload"
+    command: sh -c "python3 -m pip install --prefix=/usr/local -e . && geoss_search create-elastic-index --with-schema /var/local/metadata/schema.yml && exec uvicorn --host 0.0.0.0 --port 8000 geoss_search:app --reload"
     volumes:
       - type: bind
         source: .
@@ -34,6 +34,14 @@ services:
     working_dir: /usr/local/geoss_search/
     environment:
       - FASTAPI_ENV=development
+
+  worker:
+    volumes:
+      - type: bind
+        source: .
+        target: /usr/local/geoss_search
+    working_dir: /usr/local/geoss_search/geoss_search
+    command: sh -c "python3 -m pip install --prefix=/usr/local -e /usr/local/geoss_search && celery --app=tasks worker --loglevel=INFO --max-tasks-per-child=1"
 
   kibana:
     depends_on:

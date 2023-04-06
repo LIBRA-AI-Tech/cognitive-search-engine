@@ -449,13 +449,13 @@ class HealthResults(BaseModel):
 
 class IngestBody(BaseModel):
     """Ingest POST request body"""
-    path: str = Query(..., description="Relative path of directory that contains the data files to ingest")
-    reset: bool = Query(False, description="When True, the Elastic index is destroyed before ingesting new data and re-build from scratch")
-    embeddings: str = Query('embeddings', description="Name of the attribute that holds the embedding compoments")
+    path: str = Field(..., description="Relative path of directory that contains the data files to ingest")
+    elastic_index: str = Field(None, alias="elasticIndex", description="Name of the elastic index to ingest data; if exists only new files will inserted")
+    embeddings: str = Field('embeddings', description="Name of the attribute that holds the embedding compoments")
 
     @validator('path')
     def build_abs_path(cls, value):
         path = os.path.join(os.getenv("INIT_DATA"), value)
-        if not os.path.isfile(path):
-            raise ValueError(f'file or directory at path {value} does not exist')
+        if not os.path.isdir(path):
+            raise ValueError(f'Path `{value}` does not exist')
         return path

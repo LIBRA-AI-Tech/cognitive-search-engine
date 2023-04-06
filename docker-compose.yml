@@ -196,6 +196,8 @@ services:
       interval: 10s
       timeout: 10s
       retries: 120
+    volumes:
+      - redis:/data
 
   setup-redis:
     build:
@@ -211,7 +213,6 @@ services:
           echo "Storing model into RedisAI failed!";
           exit 1;
         fi;
-        echo 'OK' > /usr/local/alldone;
         echo "All done!";
       '
     volumes:
@@ -220,14 +221,12 @@ services:
         target: /var/local/model
         read_only: true
     environment:
+      - ELASTIC_INDEX=${ELASTIC_INDEX}
       - MODEL_PATH=/var/local/model
+      - MODEL_NAME=${MODEL_NAME}
+      - MODEL_TAG=${MODEL_TAG}
       - REDIS_HOST=redisai
       - REDIS_PORT=6379
-    healthcheck:
-      test: ["CMD-SHELL", "[ -f /usr/local/alldone ]"]
-      interval: 10s
-      timeout: 30s
-      retries: 120
 
   api:
     depends_on:
@@ -240,7 +239,7 @@ services:
       redisai:
         condition: service_healthy
       setup-redis:
-        condition: service_healthy
+        condition: service_completed_successfully
     image: "eiffel/geoss-search-service:${VERSION}"
     build:
       context: .
@@ -279,6 +278,43 @@ services:
       - API_KEY=${API_KEY}
       - REDIS_HOST=redisai
       - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redisai:6379/0
+      - CELERY_RESULT_BACKEND=redis://redisai:6379/0
+
+  worker:
+    depends_on:
+      - api
+      - redisai
+    image: "eiffel/geoss-search-service:${VERSION}"
+    volumes:
+      - type: bind
+        source: ${MODEL_PATH}
+        target: /var/local/model
+        read_only: true
+      - type: bind
+        source: ${INIT_DATA:-/dev/null}
+        target: /var/local/metadata/data/
+        read_only: true
+      - type: bind
+        source: ${INIT_DATA_SCHEMA:-/dev/null}
+        target: /var/local/metadata/schema.yml
+        read_only: true
+      - type: volume
+        source: certs
+        target: /var/local/certs
+        read_only: true
+    command: ["celery", "--app=tasks", "worker", "--loglevel=INFO", "--max-tasks-per-child=1"]
+    environment:
+      - CELERY_BROKER_URL=redis://redisai:6379/0
+      - CELERY_RESULT_BACKEND=redis://redisai:6379/0
+      - ELASTIC_NODE=https://es01:9200
+      - CA_CERTS=/var/local/certs/ca
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+      - ELASTIC_INDEX=${ELASTIC_INDEX}
+      - MODEL_PATH=/var/local/model
+      - QUANTIZE_MODEL=${QUANTIZE_MODEL}
+      - DATA_PATH=/var/local/metadata/data
+      - INIT_DATA_SCHEMA=/var/local/metadata/schema.yml
 
 volumes:
   certs:
@@ -288,4 +324,6 @@ volumes:
   esdata02:
     driver: local
   esdata03:
+    driver: local
+  redis:
     driver: local
