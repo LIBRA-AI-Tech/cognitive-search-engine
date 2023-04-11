@@ -276,7 +276,7 @@ def create_elastic_index(**kwargs):
         "reset_index": {"type": "boolean"},
         "records": {"type": "integer"},
         "status": {"type": "keyword"},
-        "progress": {"type": "string"},
+        "progress": {"type": "text"},
     }
     _create_elastic_index(es, 'ingest-jobs', with_schema={"mappings": {"properties": properties}})
 
