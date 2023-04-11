@@ -233,7 +233,7 @@ def _ingest(es, path: str, elastic_index: str, embeddings: str=None) -> None:
             logging.info(f'{os.path.basename(file)} type is not supported.')
             continue
 
-def _create_elastic_index(es, index: str, with_schema: Optional[Union[str, dict]]=None, force: bool=True) -> bool:
+def _create_elastic_index(es, index: str, with_schema: Optional[Union[str, dict]]=None, force: bool=False) -> bool:
     """Create an index to ElasticSearch
 
     Creates the index used by the service, the name of the index
@@ -279,6 +279,15 @@ def create_elastic_index(**kwargs):
         "progress": {"type": "text"},
     }
     _create_elastic_index(es, 'ingest-jobs', with_schema={"mappings": {"properties": properties}})
+    properties = {
+        "record_id": {"type": "keyword"},
+        "ontology": {"type": "keyword"},
+        "concept": {"type": "keyword"},
+        "individual": {"type": "keyword"},
+        "description": {"type": "text"},
+        "creation": {"type": "date"},
+    }
+    _create_elastic_index(es, 'ontology', with_schema={"mappings": {"properties": properties}})
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))

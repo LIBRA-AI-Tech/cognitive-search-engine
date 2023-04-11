@@ -275,6 +275,7 @@ services:
       - SEARCH_SIZE=${SEARCH_SIZE}
       - INIT_DATA=/var/local/metadata/data/
       - INIT_DATA_SCHEMA=/var/local/metadata/schema.yml
+      - ADMIN_KEY=${ADMIN_KEY}
       - API_KEY=${API_KEY}
       - REDIS_HOST=redisai
       - REDIS_PORT=6379

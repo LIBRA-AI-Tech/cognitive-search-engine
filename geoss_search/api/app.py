@@ -7,7 +7,7 @@ from geoss_search.schemata.general import HealthResults
 from geoss_search._version import __version__
 
 from .internal import admin
-from .routers import search
+from .routers import search, ontology
 from .dependencies import es
 
 app = FastAPI(
@@ -16,8 +16,9 @@ app = FastAPI(
     version=__version__,
     root_path=os.getenv('ROOT_PATH', '/')
 )
-app.include_router(admin.router)
 app.include_router(search.router)
+app.include_router(ontology.router)
+app.include_router(admin.router)
 redis_pool = redis.ConnectionPool(host='redisai', port=6379, db=0)
 
 @app.on_event("shutdown")

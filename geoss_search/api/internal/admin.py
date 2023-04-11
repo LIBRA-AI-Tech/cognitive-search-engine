@@ -6,12 +6,12 @@ from geoss_search.elastic import Query as ElasticQuery
 from geoss_search.schemata.general import IngestBody
 from geoss_search.tasks import ingest_data_task
 
-from ..dependencies import es, api_key_auth
+from ..dependencies import es, admin_key_auth
 
 router = APIRouter(
     prefix="/admin",
-    tags=["admin"],
-    dependencies=[Depends(api_key_auth)]
+    tags=["Admin"],
+    dependencies=[Depends(admin_key_auth)]
 )
 
 @router.post('/ingest', summary="Ingest data into ElasticSearch", status_code=202)

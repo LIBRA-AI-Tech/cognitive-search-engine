@@ -13,7 +13,7 @@ from geoss_search.augmented_metadata import augmented_metadata
 from ..dependencies import es
 
 router = APIRouter(
-    tags=["search"]
+    tags=["Search"]
 )
 
 def _getFeatures(field):
