@@ -1,43 +1,20 @@
-from fastapi import FastAPI, Query, status, Depends, Security, Depends
-from fastapi.exceptions import HTTPException
-from fastapi.security.api_key import APIKeyHeader
-from datetime import datetime
-from typing import List, Optional
 import math
-import pygeos as pg
 import json
-import os
-import redis
-from .settings import settings
-from .elastic import Aggregation, engine_connect, SemanticSearch, ExactSearch, Query as ElasticQuery
-from .schemata.general import ListOfRecords, SearchResults, HealthResults, SourceSchema, RawMetadata, Attributes, IngestBody
-from .schemata.query import QueryModel
-from .schemata.augmented import Augmented
-from .tasks import ingest_data_task
-from ._version import __version__
-from .augmented_metadata import augmented_metadata
+from typing import List, Optional
+import pygeos as pg
+from fastapi import Query, Depends, Depends, APIRouter
 
-es = engine_connect()
-app = FastAPI(
-    title="GEOSS cognitive search API",
-    description="GEOSS metadata catalog, supporting cognitive search",
-    version=__version__,
-    root_path=os.getenv('ROOT_PATH', '/')
+from geoss_search.elastic import Aggregation, SemanticSearch, ExactSearch, Query as ElasticQuery
+from geoss_search.schemata.general import ListOfRecords, SearchResults, SourceSchema, RawMetadata, Attributes
+from geoss_search.schemata.query import QueryModel
+from geoss_search.schemata.augmented import Augmented
+from geoss_search.augmented_metadata import augmented_metadata
+
+from ..dependencies import es
+
+router = APIRouter(
+    tags=["search"]
 )
-redis_pool = redis.ConnectionPool(host='redisai', port=6379, db=0)
-
-api_key_header = APIKeyHeader(name="api-key", auto_error=False)
-def api_key_auth(api_key: str=Security(api_key_header)):
-    if api_key != os.getenv('API_KEY'):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Forbidden"
-        )
-
-@app.on_event("shutdown")
-async def app_shutdown():
-    """Close connection to elastic search on application shutdown"""
-    await es.close()
 
 def _getFeatures(field):
     if len(field) == 0:
@@ -88,7 +65,7 @@ def _parseElasticResponse(response: dict, **kwargs) -> dict:
     geojson = {'type': 'FeatureCollection', 'features': [] if features is None else features}
     return {'page': page, 'totalPages': totalPages, 'numberOfResults': numberOfResults, 'data': data, 'significantTerms': significantTerms, 'geoJson': geojson}
 
-@app.get('/search', response_model=SearchResults, summary="Perform a search on GEOSS metadata")
+@router.get('/search', response_model=SearchResults, summary="Perform a search on GEOSS metadata")
 async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
     """
     Search parameters optionally include a *query* string, a spatial *bounding box*, a *time extend*, as well as various *filters* that apply on the categorical attributes of the metadata. When a query string is given, the results are sorted by a score reflecting the metadata relevance with the query string. Two distinct methods are supported for the query: a *semantic search* and a more traditional *exact search*. The two methods result in different ranges for the values of the *relevance score*.
@@ -158,7 +135,7 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
 
     return _parseElasticResponse(response, page=params.page, records_per_page=params.records_per_page, terms_significance=params.terms_significance)
 
-@app.get('/sources', response_model=List[SourceSchema], summary="Retrieve available sources list")
+@router.get('/sources', response_model=List[SourceSchema], summary="Retrieve available sources list")
 async def sources():
     """Fetch a list of all available sources of GEOSS metadata"""
     agg = Aggregation()
@@ -169,7 +146,7 @@ async def sources():
 
     return [{"id": r['key'], "title": r['sourceTitle']['buckets'][0]['key']} for r in response['aggregations']['source']['buckets']]
 
-@app.get('/raw', response_model=RawMetadata, summary="Retrieve raw metadata for specific record")
+@router.get('/raw', response_model=RawMetadata, summary="Retrieve raw metadata for specific record")
 async def raw(
     id: str=Query(..., description="Resource id"),
 ):
@@ -189,14 +166,14 @@ async def raw(
         return None
     return response['hits']['hits'][0]['_source']
 
-@app.get('/augmented', response_model=Augmented, summary="Retrieve augmented metadata for specific record")
+@router.get('/augmented', response_model=Augmented, summary="Retrieve augmented metadata for specific record")
 async def raw(
     id: str=Query(..., description="Resource id"),
 ):
     """Get augmented metadata for a specific record, given its ID"""
     return augmented_metadata.get(id, {})
 
-@app.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
+@router.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(
     ids: str=Query(..., description="A comma separated list of resource IDs"),
     attributes: Optional[List[Attributes]]=Query(['id', 'title', 'description', 'source', 'online', 'keyword'], description="List of attributes that will be included in the response.")
@@ -219,36 +196,3 @@ async def metadata(
     records = [record.get('_source') for record in response['hits']['hits']]
 
     return {"total": total, "bbox": bbox, "records": records}
-
-@app.get('/health', response_model=HealthResults, summary="Service health")
-async def health():
-    """Check the health of the service"""
-    try:
-        health = await es.cluster.health()
-    except Exception as e:
-        return {"status": "FAILED", "details": "Connection to search engine failed", "message": str(e)}
-    if health["status"] != 'green':
-        return {"status": "FAILED", "details": "Search engine status is {}".format(health["status"]), "message": ""}
-    if health["number_of_nodes"] != 3:
-        return {"status": "OK", "details": "", "message": "Currently {} nodes are running".format(health["number_of_nodes"])}
-    index_exists = await es.indices.exists(index=settings.elastic_index)
-    if not index_exists:
-        return {"status": "FAILED", "details": "Index `{}` does not exist in search engine".format(settings.elastic_index), "message": ""}
-    return {"status": "OK", "details": "", "message": "System is running healthy"}
-
-@app.post('/ingest', dependencies=[Depends(api_key_auth)], summary="Ingest data into ElasticSearch", status_code=202)
-async def ingest(ingestBody: IngestBody):
-    elastic_index = settings.elastic_index if ingestBody.elastic_index is None else ingestBody.elastic_index
-    response = await es.index(index='ingest-jobs', body={"started": datetime.now().isoformat(), "status": "pending", "elastic_index": elastic_index})
-    token = response.get('_id')
-    ingest_data_task.apply_async((ingestBody.path, ingestBody.embeddings, elastic_index), task_id=token)
-    return {"token": token, "url": f"/task/{token}"}
-
-@app.get('/task/{token}', dependencies=[Depends(api_key_auth)], summary="Get task info")
-async def get_task_info(token: str):
-    details = await ElasticQuery(es=es, index="ingest-jobs").query({"ids": {"values": [token]}}).exec()
-    details = details['hits']['hits']
-    if len(details) == 0:
-        return None
-    details = details[0].get('_source', {})
-    return details
