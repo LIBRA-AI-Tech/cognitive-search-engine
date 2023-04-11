@@ -281,6 +281,7 @@ services:
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=redis://redisai:6379/0
       - CELERY_RESULT_BACKEND=redis://redisai:6379/0
+      - ROOT_PATH=${ROOT_PATH}
 
   worker:
     depends_on:
