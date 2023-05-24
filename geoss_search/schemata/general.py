@@ -276,8 +276,8 @@ class SourceSchema(BaseModel):
 
 class TimePeriod(BaseModel):
     """Time period model"""
-    from_: datetime = Query(..., description="Begin of temporal extent")
-    to: datetime = Query(..., description="End of temporal extent")
+    from_: datetime = Query(None, description="Begin of temporal extent")
+    to: datetime = Query(None, description="End of temporal extent")
 
     class Config:
         fields = {

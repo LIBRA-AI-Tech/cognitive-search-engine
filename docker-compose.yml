@@ -3,6 +3,8 @@ version: "3.8"
 services:
   setup:
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    networks:
+      - shared-network
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
     user: "0"
@@ -67,6 +69,8 @@ services:
       setup:
         condition: service_healthy
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    networks:
+      - shared-network
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata01:/usr/share/elasticsearch/data
@@ -111,6 +115,8 @@ services:
     depends_on:
       - es01
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    networks:
+      - shared-network
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata02:/usr/share/elasticsearch/data
@@ -152,6 +158,8 @@ services:
     depends_on:
       - es02
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
+    networks:
+      - shared-network
     volumes:
       - certs:/usr/share/elasticsearch/config/certs
       - esdata03:/usr/share/elasticsearch/data
@@ -191,6 +199,8 @@ services:
 
   redisai:
     image: redislabs/redisai:1.2.6-cpu-bionic
+    networks:
+      - shared-network
     healthcheck:
       test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 10s
@@ -200,6 +210,8 @@ services:
       - redis:/data
 
   setup-redis:
+    networks:
+      - shared-network
     build:
       context: .
       target: "redis-setup"
@@ -241,6 +253,8 @@ services:
       setup-redis:
         condition: service_completed_successfully
     image: "eiffel/geoss-search-service:${VERSION}"
+    networks:
+      - shared-network
     build:
       context: .
       args:
@@ -282,12 +296,15 @@ services:
       - CELERY_BROKER_URL=redis://redisai:6379/0
       - CELERY_RESULT_BACKEND=redis://redisai:6379/0
       - ROOT_PATH=${ROOT_PATH}
+      - SPATIAL_CONTEXT_URL=${SPATIAL_CONTEXT_URL}
 
   worker:
     depends_on:
       - api
       - redisai
     image: "eiffel/geoss-search-service:${VERSION}"
+    networks:
+      - shared-network
     volumes:
       - type: bind
         source: ${MODEL_PATH}
@@ -329,3 +346,8 @@ volumes:
     driver: local
   redis:
     driver: local
+
+networks:
+  shared-network:
+    name: shared-network
+    driver: bridge

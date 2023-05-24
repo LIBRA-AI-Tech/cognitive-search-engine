@@ -1,8 +1,10 @@
+import os
 import math
 import json
 from typing import List, Optional
 import pygeos as pg
-from fastapi import Query, Depends, Depends, APIRouter
+from fastapi import Query, Depends, APIRouter, HTTPException
+import requests
 
 from geoss_search.elastic import Aggregation, SemanticSearch, ExactSearch, Query as ElasticQuery
 from geoss_search.schemata.general import ListOfRecords, SearchResults, SourceSchema, RawMetadata, Attributes
@@ -163,7 +165,7 @@ async def raw(
     response = await handler.exec()
 
     if len(response['hits']['hits']) == 0:
-        return None
+        raise HTTPException(status_code=404, detail="Record not found")
     return response['hits']['hits'][0]['_source']
 
 @router.get('/augmented', response_model=Augmented, summary="Retrieve augmented metadata for specific record")
@@ -171,7 +173,28 @@ async def raw(
     id: str=Query(..., description="Resource id"),
 ):
     """Get augmented metadata for a specific record, given its ID"""
-    return augmented_metadata.get(id, {})
+    handler = ElasticQuery(es=es)
+    handler = handler.query({
+        "bool": {
+            "must": [{
+                "match": {"id": id}
+            }]
+        },
+    })
+    handler = handler._source(False)
+    handler = handler.fields(['_geom'])
+    response = await handler.exec()
+    if len(response['hits']['hits']) == 0:
+        raise HTTPException(status_code=404, detail="Record not found")
+    
+    geom = response['hits']['hits'][0]['fields']['_geom'][0]
+    if geom['type'] == 'Polygon':
+        polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
+        r = requests.get(url=os.getenv('SPATIAL_CONTEXT_URL'), params={'polygon': polygon})
+        external = r.json()
+    else:
+        external = None
+    return {"insights": None, "externalSources": external, "extractedKeyphrases": None}
 
 @router.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(
