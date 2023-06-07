@@ -4,7 +4,7 @@ import json
 from typing import List, Optional
 import pygeos as pg
 from fastapi import Query, Depends, APIRouter, HTTPException
-import requests
+import urllib3
 
 from geoss_search.elastic import Aggregation, SemanticSearch, ExactSearch, Query as ElasticQuery
 from geoss_search.schemata.general import ListOfRecords, SearchResults, SourceSchema, RawMetadata, Attributes
@@ -190,8 +190,9 @@ async def raw(
     geom = response['hits']['hits'][0]['fields']['_geom'][0]
     if geom['type'] == 'Polygon':
         polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
-        r = requests.get(url=os.getenv('SPATIAL_CONTEXT_URL'), params={'polygon': polygon})
-        external = r.json()
+        http = urllib3.PoolManager()
+        r = http.request("GET", "https://search.eiffel4climate.eu/spatial-context/context", fields={'polygon': polygon}, headers={"Content-Type": "application/json"})
+        external = json.loads(r.data) if r.status == 200 else None
     else:
         external = None
     return {"insights": None, "externalSources": external, "extractedKeyphrases": None}
