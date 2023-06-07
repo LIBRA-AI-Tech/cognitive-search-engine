@@ -1,6 +1,31 @@
-api:
-  environment:
-    FASTAPI_ENV=production
-  volumes:
-    - /var/log/geoss_search:/var/local/geoss_search/logs
+services:
 
+  es01:
+    restart: unless-stopped
+
+  es02:
+    restart: unless-stopped
+
+  es03:
+    restart: unless-stopped
+
+  redisai:
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      target: "production"
+      args:
+        - VERSION=${VERSION}
+    restart: unless-stopped
+    environment:
+      - FASTAPI_ENV=production
+    volumes:
+      - /var/log/geoss_search:/var/local/geoss_search/logs
+
+  worker:
+    build:
+      context: .
+      target: "production"
+    restart: unless-stopped

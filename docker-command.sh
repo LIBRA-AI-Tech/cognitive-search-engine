@@ -29,7 +29,7 @@ exec gunicorn --access-logfile - \
     --worker-tmp-dir /dev/shm \
     --workers ${num_workers} \
     --threads ${num_threads} \
-    -t ${timeout} \
+    -t 30 \
     -k "$WORKER_CLASS" \
     --bind "0.0.0.0:${server_port}" \
     "geoss_search:app"

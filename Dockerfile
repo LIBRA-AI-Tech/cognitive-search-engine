@@ -38,18 +38,14 @@ COPY geoss_search /usr/local/geoss_search/geoss_search
 COPY docker-command.sh /usr/local/bin
 RUN chmod a+x /usr/local/bin/docker-command.sh
 
-RUN mkdir /var/local/geoss_search && \
-    useradd -U --home /var/local/geoss_search fastapi && \
-    chown -R fastapi: /var/local/geoss_search && \
-    chown -R fastapi: /usr/local/geoss_search
+RUN mkdir /var/local/geoss_search
 WORKDIR /var/local/geoss_search
-RUN mkdir ./logs && chown fastapi: ./logs
-COPY --chown=fastapi logging.conf .
+RUN mkdir ./logs
+COPY logging.conf .
 
 RUN pip3 --no-cache-dir install --upgrade pip && \
     (cd /usr/local/geoss_search && pip3 --no-cache-dir install --prefix=/usr/local -r requirements-production.txt && pip3 --no-cache-dir install --prefix=/usr/local . && python3 setup.py clean -a)
 
-USER fastapi
 CMD ["/usr/local/bin/docker-command.sh"]
 
 EXPOSE 8000
