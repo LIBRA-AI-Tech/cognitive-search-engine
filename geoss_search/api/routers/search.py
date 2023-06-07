@@ -191,7 +191,7 @@ async def raw(
     if geom['type'] == 'Polygon':
         polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
         http = urllib3.PoolManager()
-        r = http.request("GET", "https://search.eiffel4climate.eu/spatial-context/context", fields={'polygon': polygon}, headers={"Content-Type": "application/json"})
+        r = http.request("GET", os.getenv('SPATIAL_CONTEXT_URL'), fields={'polygon': polygon}, headers={"Content-Type": "application/json"})
         external = json.loads(r.data) if r.status == 200 else None
     else:
         external = None
