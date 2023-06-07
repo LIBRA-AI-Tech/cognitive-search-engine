@@ -17,21 +17,44 @@ class Insights(BaseModel):
     temporalExtent: str = Field(None, description="Temporal extent (including time unit)")
     timeResolution: str = Field(None, description="Resolution in time (same units as temporalExtent")
 
-class NutsSchema(BaseModel):
+class CategoricalSchema(BaseModel):
     code: str = Field(None, description="NUTS code")
-    name: str = Field(None, description="NUTS latin name")
+    label: str = Field(None, description="NUTS latin name")
     coverage: float = Field(None, description="Percentage of this NUTS covered by the dataset area")
 
 class NutsLevels(BaseModel):
-    nuts0: List[NutsSchema] = Field(None, alias="NUTS0", description="NUTS level 0 coverage")
-    nuts1: List[NutsSchema] = Field(None, alias="NUTS1", description="NUTS level 1 coverage")
-    nuts2: List[NutsSchema] = Field(None, alias="NUTS2", description="NUTS level 2 coverage")
-    nuts3: List[NutsSchema] = Field(None, alias="NUTS3", description="NUTS level 3 coverage")
+    nuts0: List[CategoricalSchema] = Field(None, alias="NUTS0", description="NUTS level 0 coverage")
+    nuts1: List[CategoricalSchema] = Field(None, alias="NUTS1", description="NUTS level 1 coverage")
+    nuts2: List[CategoricalSchema] = Field(None, alias="NUTS2", description="NUTS level 2 coverage")
+    nuts3: List[CategoricalSchema] = Field(None, alias="NUTS3", description="NUTS level 3 coverage")
+
+class Statistics(BaseModel):
+    avg: float = Field(None, description="Average value")
+    min: float = Field(None, description="Minimum value")
+    max: float = Field(None, description="Maximum value")
+    stddev: float = Field(None, description="Standard deviation")
+
+class AirQuality(BaseModel):
+    o3_aot40v: Statistics = Field(None, alias="O3_AOT40v", description="Ozone AOT40 values for Vegetation")
+    o3_aot40f: Statistics = Field(None, alias="O3_AOT40f", description="Ozone AOT40 values for Forests")
+    nox_avg: Statistics = Field(None, alias="NOx_avg", description="NOx annual average")
+    dif_aot40v: Statistics = Field(None, alias="dif_AOT40v", description="Interannual difference in Ozone AOT40 values for Vegetation")
+    dif_aot40f: Statistics = Field(None, alias="dif_AOT40f", description="Interannual difference in Ozone AOT40 values for Forests")
+    dif_noxavg: Statistics = Field(None, alias="dif_NOxavg", description="Interannual difference in NOx annual average values for 2018-17")
+    pod6_wheat: Statistics = Field(None, alias="POD6_wheat", description="Phytoxic Ozone Dose for wheat")
+    pod6potato: Statistics = Field(None, alias="POD6potato", description="Phytoxic Ozone Dose for potato")
+    pod6tomato: Statistics = Field(None, alias="POD6tomato", description="Phytoxic Ozone Dose for tomato")
+    coverage: float = Field(None, description="Coverage percentage of the area within the air quality dataset")
 
 class ExternalSources(BaseModel):
     nuts: NutsLevels = Field(None, alias="NUTS", description="NUTS coverage for each level")
     soil: str = Field(None, alias="Soil", description="Soil erosion")
-    land_use: List[NutsSchema] = Field(None, alias="LandUse", description="Land use coverage")
+    land_use: List[CategoricalSchema] = Field(None, alias="landUse", description="Corine land use coverage")
+    air_quality: AirQuality = Field(None, alias="airQuality", description="Air quality data")
+    population: int = Field(None, description="Estimation of total population of the selected area based on NUTS3 population density")
+    soil_erosion: float = Field(None, alias="soilErosion", description="Soil erosion in tonnes per hectare")
+    heating_degree_days: float = Field(None, alias="heatingDegreeDays", description="Heating degree days")
+    cooling_degree_days: float = Field(None, alias="coolingDegreeDays", description="Cooling degree days")
 
 class Augmented(BaseModel):
     insights: Insights = Field(None, description="Metadata from data insights")
