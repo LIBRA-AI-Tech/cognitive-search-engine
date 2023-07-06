@@ -21,6 +21,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     install_requires=[
         "tzlocal>=2.1,<2.2",
+        "backports.zoneinfo==0.2.1",    
         "torch>=1.11.0,<1.12.0",
         "sentence_transformers>=2.2.0,<2.3.0",
         "numpy>=1.19.0,<1.23.0",

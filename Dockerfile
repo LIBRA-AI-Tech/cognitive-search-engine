@@ -6,12 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc && \
+    apt-get install -y gcc ruby-full && \
     apt-get clean
 
 COPY requirements.txt requirements-production.txt ./
-RUN pip3 --no-cache-dir install --upgrade pip wheel && \
-    pip3 --no-cache-dir install --prefix=/usr/local -r requirements.txt
+RUN pip --no-cache-dir install --upgrade pip wheel
+RUN pip install --prefix==/usr/local --upgrade backports.zoneinfo
+RUN pip --no-cache-dir install --prefix=/usr/local -r requirements.txt
 
 # BASE Image
 FROM python:3.8-slim-bullseye as base
@@ -43,8 +44,8 @@ WORKDIR /var/local/geoss_search
 RUN mkdir ./logs
 COPY logging.conf .
 
-RUN pip3 --no-cache-dir install --upgrade pip && \
-    (cd /usr/local/geoss_search && pip3 --no-cache-dir install --prefix=/usr/local -r requirements-production.txt && pip3 --no-cache-dir install --prefix=/usr/local . && python3 setup.py clean -a)
+RUN pip --no-cache-dir install --upgrade pip && \
+    (cd /usr/local/geoss_search && pip --no-cache-dir install --prefix=/usr/local -r requirements-production.txt && pip --no-cache-dir install --prefix=/usr/local . && python3 setup.py clean -a)
 
 CMD ["/usr/local/bin/docker-command.sh"]
 
