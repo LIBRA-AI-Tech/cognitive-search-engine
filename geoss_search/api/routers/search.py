@@ -10,7 +10,6 @@ from geoss_search.elastic import Aggregation, SemanticSearch, ExactSearch, Query
 from geoss_search.schemata.general import ListOfRecords, SearchResults, SourceSchema, RawMetadata, Attributes
 from geoss_search.schemata.query import QueryModel
 from geoss_search.schemata.augmented import Augmented
-from geoss_search.augmented_metadata import augmented_metadata
 
 from ..dependencies import es
 
