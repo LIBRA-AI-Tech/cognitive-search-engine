@@ -6,6 +6,8 @@ import json
 import warnings
 from typing import Optional, Iterator, Union
 from time import perf_counter
+import pandas as pd
+from uuid import uuid4
 from elasticsearch import Elasticsearch
 from elasticsearch.helpers import bulk 
 from .model_inference import get_dims
@@ -92,7 +94,31 @@ class Cache:
         else:
             self._cache[src] = {src: {title: {desc: value}}}
 
-def load_parquet(es: Elasticsearch, elastic_index: str, filename: str, **kwargs) -> Iterator[dict]:
+def _load_profiling_ids(dataframe: pd.DataFrame) -> Iterator[dict]:
+    """Load ids from dataframe for profiling jobs
+
+    Args:
+        dataframe (pd.DataFrame): Pandas dataframe with data
+
+    Yields:
+        Iterator[dict]: Data to be ingested in elastic index
+    """
+    df = dataframe[dataframe["_profile"] == True]
+    for _, row in df.iterrows():
+        logging.info(f'Ingest {row.id}')
+        yield {
+            "_index": "data-insights-jobs",
+            "_id": row.id,
+            "status": "unvisited",
+            "started_at": None,
+            "updated_at": None,
+            "extracted_url": None,
+            "extracted_type": None,
+            "path": None,
+            "message": ''
+        }
+
+def load_data(es: Elasticsearch, elastic_index: str, dataframe: pd.DataFrame, **kwargs) -> Iterator[dict]:
     """Load a parquet file into a Pandas DataFrame
 
     An additional attribute `group` is added in the DataFrame, which is populated with a
@@ -101,15 +127,12 @@ def load_parquet(es: Elasticsearch, elastic_index: str, filename: str, **kwargs)
     Args:
         es (elasticsearch.Elasticsearch): Elasticsearch engine
         elastic_index (str): Elastic index of the data
-        filename (str): Path of the parquet file.
+        dataframe (pandas.DataFrame): Pandas dataframe with data
 
     Yields:
         Iterator[dict]: Dictionary represantation of each record (row).
     """
-    import pandas as pd
-    from uuid import uuid4
-    df = pd.read_parquet(filename)
-    df = bulk_predict(df, **kwargs)
+    df = bulk_predict(dataframe, **kwargs)
     cache = Cache()
     for _, row in df.iterrows():
         record = row.to_dict()
@@ -192,7 +215,7 @@ def _get_schema_mappings(with_schema: Optional[str]=None) -> dict:
         "mappings": {
             "properties": schema
         }
-    }        
+    }
 
 def _ingest(es, path: str, elastic_index: str, embeddings: str=None) -> None:
     """Ingest data to elastic search
@@ -214,15 +237,15 @@ def _ingest(es, path: str, elastic_index: str, embeddings: str=None) -> None:
             bulk(es, _load_json(path, embeddings=embeddings), index=elastic_index)
         elif file.endswith('.parquet'):
             logging.info('Ingesting Parquet file ' + os.path.basename(file))
+            df = pd.read_parquet(path)
+            bulk_kwargs = {"raise_on_error": False, "raise_on_exception": False, "max_retries": 100, "request_timeout": 360}
             try:
                 st = perf_counter()
-                info = bulk(es, load_parquet(es, elastic_index, path, embeddings=embeddings),
+                info = bulk(es, load_data(es, elastic_index, df, embeddings=embeddings),
                     index=elastic_index,
-                    raise_on_error=False,
-                    raise_on_exception=False,
-                    max_retries=100,
-                    request_timeout=360
+                    **bulk_kwargs
                 )
+                bulk(es, _load_profiling_ids(df), **bulk_kwargs)
                 logging.info("Bulk result: %s", info)
                 ingest_time = perf_counter() - st
                 logging.info(f"Ingested Parquet in {ingest_time} s")
@@ -288,6 +311,16 @@ def create_elastic_index(**kwargs):
         "creation": {"type": "date"},
     }
     _create_elastic_index(es, 'ontology', with_schema={"mappings": {"properties": properties}})
+    properties = {
+        "status": {"type": "keyword"}, # unvisited, started, extraction_failed, visited, downloaded, profiled, profiling_failed
+        "started_at": {"type": "date"},
+        "updated_at": {"type": "date"},
+        "extracted_url": {"type": "text"},
+        "extracted_type": {"type": "keyword"},
+        "path": {"type": "text"},
+        "message": {"type": "text"}
+    }
+    _create_elastic_index(es, 'data-insights-jobs', with_schema={"mappings": {"properties": properties}})
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
