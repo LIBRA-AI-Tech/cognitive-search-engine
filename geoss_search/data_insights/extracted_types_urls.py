@@ -1,5 +1,6 @@
 """
-Module Name: data insights
+Module Name: extracted_types_urls
+
 This module provides functions for comparing and extracting metadata and types from URLs.
 
 Functions:
@@ -16,13 +17,14 @@ Functions:
 
 import asyncio
 from urllib.parse import urlparse
+from typing import List, Tuple
 import aiohttp
 from aiolimiter import AsyncLimiter
 import pandas as pd
 
-responses=[]
-limiter = AsyncLimiter(20, 1) # 20 Requests / sec
-def metadata_compare_one_url(given_id: str,df_url: pd.DataFrame,df_hold:pd.DataFrame,extracted_types)->tuple[str,pd.DataFrame,list]:
+
+
+def metadata_compare_one_url(given_id: str,df_url: pd.DataFrame,df_hold: pd.DataFrame,extracted_types: List)->Tuple[str,pd.DataFrame,list]:
     """
     Compares metadata of a given URL with predefined string patterns.
 
@@ -86,7 +88,7 @@ def metadata_compare_one_url(given_id: str,df_url: pd.DataFrame,df_hold:pd.DataF
                 extracted_types=[""]
     return given_id,df_hold,extracted_types
 
-def metadata_compare_url(df_url: pd.DataFrame)->tuple[pd.DataFrame,list]:
+def metadata_compare_url(df_url: pd.DataFrame)->Tuple[pd.DataFrame,List]:
     """
     Compares metadata for URLs in a given DataFrame.
 
@@ -115,7 +117,7 @@ def metadata_compare_url(df_url: pd.DataFrame)->tuple[pd.DataFrame,list]:
             prev_id,df_hold,extracted_types=metadata_compare_one_url(given_id,df_url,df_hold,extracted_types)
     return df_hold,extracted_types
 
-def url_parser_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)->tuple[str,pd.DataFrame]:
+def url_parser_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)->Tuple[str,pd.DataFrame]:
     """
     Parses URLs in the given DataFrame and extracts specific types  based on predefined criteria and updates the 'df_hold' DataFrame accordingly.
 
@@ -205,15 +207,15 @@ def url_parser(df_hold:pd.DataFrame)->pd.DataFrame:
 
     return df_hold2
 
-async def fetch_headers(url: str, id_: str, semaphore) -> bytes:
+async def fetch_headers(url: str, id_: str, semaphore,responses:List) -> bytes:
     """
     Fetches the headers for a given URL asynchronously using aiohttp.
 
     Args:
         url (str): The URL to fetch the headers from.
         id_ (str): The ID associated with the URL.
-S        semaphore: A semaphore object used for concurrency control.
-
+        semaphore: A semaphore object used for concurrency control.
+        responses:list with responses
     Returns:
         bytes: The fetched headers as bytes.
 
@@ -228,7 +230,7 @@ S        semaphore: A semaphore object used for concurrency control.
         semaphore = asyncio.Semaphore(5)
         headers = await fetch_headers("https://example.com", "example_id", semaphore)
     """
-
+    limiter = AsyncLimiter(20, 1) # 20 Requests / sec
     async with aiohttp.ClientSession() as session:
         await semaphore.acquire()
         async with limiter:
@@ -238,14 +240,14 @@ S        semaphore: A semaphore object used for concurrency control.
                         response = (id_, resp.status, resp.headers['Content-Type'])
                     else:
                         response = (id_, resp.status, None)
-            except asyncio.exceptions.TimeoutError:
+            except asyncio.TimeoutError:
                 response=(id_, None, None)
             except Exception:
                 response = (id_, 0, None)
             responses.append(response)
             semaphore.release()
 
-async def get_tasks(given_df: pd.DataFrame):
+async def get_tasks(given_df: pd.DataFrame,responses: List):
     """
     Asynchronously fetches headers for URLs in a given DataFrame.
 
@@ -270,10 +272,10 @@ async def get_tasks(given_df: pd.DataFrame):
 
     """
     semaphore = asyncio.Semaphore(value=100)
-    tasks = [fetch_headers(r['url'], index, semaphore) for index, r in given_df.iterrows()]
+    tasks = [fetch_headers(r['url'], index, semaphore,responses) for index, r in given_df.iterrows()]
     await asyncio.gather(*tasks)
 
-def headers_compare_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)->tuple[str,pd.DataFrame]:
+def headers_compare_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)->Tuple[str,pd.DataFrame]:
     """
     Compares headers in a DataFrame with a given list of strings and extracts matching types.
 
@@ -305,7 +307,7 @@ def headers_compare_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)-
     df_hold = pd.concat([df_hold, df2],ignore_index = True)
     return given_id,df_hold
 
-def get_headers_compare_url(df_hold2:pd.DataFrame)->pd.DataFrame:
+def get_headers_compare_url(df_hold2: pd.DataFrame,responses: List)->pd.DataFrame:
     """
     Retrieves and compares headers for URLs in a given DataFrame.
 
@@ -335,7 +337,7 @@ def get_headers_compare_url(df_hold2:pd.DataFrame)->pd.DataFrame:
 
     """
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(get_tasks(df_hold2))
+    asyncio.run(get_tasks(df_hold2,responses))
     responses_df=pd.DataFrame(responses,columns=["id_ind","status","header"])
     df_hold2.reset_index(inplace=True,drop=True)
     index_name=df_hold2.index.name
@@ -351,7 +353,7 @@ def get_headers_compare_url(df_hold2:pd.DataFrame)->pd.DataFrame:
     df_hold3=df_hold3.drop(["id_ind"], axis=1)
     return df_hold3
 
-def get_df_with_extracted_url_and_type(df_url:pd.DataFrame):
+def get_df_with_extracted_url_and_type(df_url: pd.DataFrame):
     """
     Extracts URL types from a DataFrame and returns a new DataFrame with additional columns for extracted types.
     
@@ -364,10 +366,11 @@ def get_df_with_extracted_url_and_type(df_url:pd.DataFrame):
         columns: ['accessType', 'protocol', 'function', 'name', 'description', 'url', 'id', 'status', 'header', 'extracted_types']
 
     """
+    responses=[]
     df_hold,extracted_types=metadata_compare_url(df_url)
     df_url["extracted_types"]=extracted_types
 
     df_hold2=url_parser(df_hold)
 
-    df_hold3=get_headers_compare_url(df_hold2)
+    df_hold3=get_headers_compare_url(df_hold2,responses)
     return df_hold3
