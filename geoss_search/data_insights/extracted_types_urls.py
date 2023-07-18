@@ -1,18 +1,31 @@
 """
 Module Name: extracted_types_urls
 
-This module provides functions for comparing and extracting metadata and types from URLs.
+This module contains functions for processing and analyzing metadata and URLs.It is comparing and extracting metadata and types from URLs.
 
 Functions:
-- metadata_compare_one_url(given_id, df_url, df_hold, extracted_types): Compares metadata of a given URL with predefined string patterns.
-- metadata_compare_url(df_url): Compares metadata for URLs in a given DataFrame.
-- url_parser_one_url(given_id, df2, df_hold): Parses URLs in the given DataFrame and extracts specific types based on predefined criteria.
-- url_parser(df_hold): Parses URLs in the given DataFrame and returns a new DataFrame with parsed information.
-- fetch_headers(url, id_, semaphore): Fetches the headers for a given URL asynchronously using aiohttp.
-- get_tasks(given_df): Asynchronously fetches headers for URLs in a given DataFrame.
-- headers_compare_one_url(given_id, df2, df_hold): Compares headers in a DataFrame with a given list of strings and extracts matching types.
-- get_headers_compare_url(df_hold2): Retrieves and compares headers for URLs in a given DataFrame.
-- get_df_with_extracted_url_and_type(df_url): Extracts URL types from a DataFrame and returns a new DataFrame with additional columns for extracted types.
+- metadata_score_url(df_url: pd.DataFrame, ind: int) -> Tuple[pd.DataFrame]: 
+    Calculates a score for each row in the DataFrame based on the values in the "function" and "description" columns.
+- metadata_compare_url(df_url: pd.DataFrame) -> Tuple[pd.DataFrame]:
+    Compares metadata in the DataFrame and assigns scores to each row based on specific conditions.
+- url_parser_score_url(df_url: pd.DataFrame, ind: int) -> pd.DataFrame:
+    Parses the URL at the specified index of the given DataFrame and calculates a score based on various URL components.
+- url_parser(df_url: pd.DataFrame) -> pd.DataFrame:
+    Parses the URLs in the given DataFrame and calculates scores based on various URL components for each URL.
+- fetch_headers(url: str, id_: str, semaphore, responses: List) -> bytes:
+    Fetches the headers for a given URL asynchronously using aiohttp.
+- get_tasks(given_df: pd.DataFrame, responses: List):
+    Asynchronously fetches headers for URLs in a given DataFrame.
+- headers_score_url(df_url: pd.DataFrame, ind: int) -> pd.DataFrame:
+    Assigns a score to a DataFrame row based on header information.
+- get_headers_compare_url(df_url: pd.DataFrame, responses: List) -> pd.DataFrame:
+    Retrieves and compares headers for URLs in a DataFrame.
+- keep_top_two_url_with_highest_score(df_url: pd.DataFrame) -> Tuple[int, int]:
+    Finds and returns the indices of the two highest scores in a DataFrame.
+- keep_url_with_highest_score(df_url: pd.DataFrame) -> int:
+    Finds and returns the index of the URL with the highest score from the given DataFrame.
+- get_df_with_extracted_url_and_type(dict_input: pd.DataFrame) -> pd.DataFrame:
+    Extracts URL types from a DataFrame and returns a new DataFrame with additional columns for extracted types.
 """
 
 import asyncio
@@ -23,189 +36,138 @@ from aiolimiter import AsyncLimiter
 import pandas as pd
 
 
-
-def metadata_compare_one_url(given_id: str,df_url: pd.DataFrame,df_hold: pd.DataFrame,extracted_types: List)->Tuple[str,pd.DataFrame,list]:
+def metadata_score_url(df_url: pd.DataFrame,ind:int)->Tuple[pd.DataFrame]:
     """
-    Compares metadata of a given URL with predefined string patterns.
+    Calculates a score for each row in the DataFrame based on the values in the "function" and "description" columns.
 
     Args:
-        given_id (str): The ID of the URL to compare its metadata.
-        df_url (pd.DataFrame): DataFrame containing the URLs and their metadata.
-        df_hold (pd.DataFrame): DataFrame to store the metadata of all urls with the same id.
-        extracted_types: A list to store the extracted types of the matched metadata.
+        df_url (pd.DataFrame): The DataFrame containing the data to be processed.
+        ind (int): The index of the row to be processed.
 
     Returns:
-        tuple[str, pd.DataFrame]: A tuple containing the given_id, updated df_hold, and the list extracted_types.
+        Tuple[pd.DataFrame]: The updated DataFrame with the calculated scores.
 
     Description:
-        The function compares the metadata of a given URL with predefined string patterns. It searches for matching patterns
-        in the 'function' and 'description' columns of the df_url DataFrame. If a match is found, the corresponding row is
-        added to the df_hold DataFrame, and the extracted type is appended to the extracted_types list. If no match is found,
-        the entire row is added to the df_hold DataFrame with an empty string appended to the extracted_types list.
+        This function calculates a score for each row in the DataFrame based on the values in the "function" and "description" columns.
+        If the "function" value is "download", the score is incremented by 1.
+        If any of the strings in the description_list is found in the lowercase "description" value, the score is incremented by 1. 
+        The updated DataFrame with the calculated scores is returned.
 
-    Example:
-        given_id = 'abc123'
-        df_url = pd.DataFrame(...)
-        df_hold = pd.DataFrame(...)
-        extracted_types = []
 
-        result = metadata_compare_one_url(given_id, df_url, df_hold, extracted_types)
-
-        # The function updates df_hold and extracted_types with the matched metadata
-        print(result)
-        # Output: ('abc123', updated_df_hold, updated_extracted_types)
     """
 
-    df2=df_url.loc[df_url["id"]==given_id]
-    df2=df2.reset_index(drop=True)
-    string_list = ["download","view","map","wms","wfs"]
-    for ind in df2.index:
-        flag=True
-        target_string1 = df2['function'][ind]
-        target_string2 = df2['description'][ind]
-        if target_string1 is not None:
-            if any(string in target_string1 for string in string_list):
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                if extracted_types:
-                    extracted_types.append(target_string1)
-                else:
-                    extracted_types=[target_string1]
-                flag=False
-        if target_string2 is not None and flag:
-            if any(string in target_string2 for string in string_list):
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                if extracted_types:
-                    extracted_types.append(target_string2)
-                else:
-                    extracted_types=[target_string2]
-                flag=False
+    # function_value and description_value are converted to lowercase
+    function_value=str(df_url.loc[ind,"function"]).lower()
+    description_value=str(df_url.loc[ind,"description"]).lower()
+    #function compare
+    if function_value=="download":
+        df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
+    description_list = ["wms","wfs"]
+    if description_value is not None:
+        description_value=str(description_value).lower()
 
-        if flag:
-            df_hold = pd.concat([df_hold, df2],ignore_index = True)
-            if extracted_types:
-                extracted_types.append("")
-            else:
-                extracted_types=[""]
-    return given_id,df_hold,extracted_types
+        # If any of the strings in description_list is found in description_value, score is incremented
+        if any(string in description_value for string in description_list):
+            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
 
-def metadata_compare_url(df_url: pd.DataFrame)->Tuple[pd.DataFrame,List]:
+    return df_url
+
+
+def metadata_compare_url(df_url: pd.DataFrame)->Tuple[pd.DataFrame]:
     """
-    Compares metadata for URLs in a given DataFrame.
+    Compares metadata in the DataFrame and assigns scores to each row based on specific conditions.
 
     Args:
-        df_url (pd.DataFrame): DataFrame containing URL metadata.
+        df_url (pd.DataFrame): The DataFrame containing the metadata information.
 
     Returns:
-        pd.DataFrame: DataFrame containing compared metadata.
+        Tuple[pd.DataFrame]: The DataFrame with updated scores for each row.
 
-    This function takes a DataFrame of URL metadata and compares the metadata for each URL.
-    It iterates over the DataFrame, extracting metadata for each unique URL using the
-    `metadata_compare_one_url` function. The extracted metadata is then stored in a new
-    DataFrame along with the corresponding URL information.
-    
-    The function returns the DataFrame containing the compared metadata as well as a list
-    of extracted types.
+    Description:
+        This function compares the metadata in the DataFrame and assigns scores to each row based on specific conditions.
+        It initializes the 'score' column in the DataFrame to zero.
+        Then, it iterates over each row in the DataFrame and calls the metadata_score_url function to calculate the score for that row.
+        Finally, the DataFrame with the updated scores is returned.
 
     """
 
-    prev_id=""
-    df_hold=pd.DataFrame(columns=["accessType","protocol","function","name","description","url","id"])
-    extracted_types=[]
+    # Initializing the 'score' column in the DataFrame to zero
+    df_url['score']=0
+
+    # Iterating over each row in the DataFrame and calling metadata_score_url function
     for ind in df_url.index:
-        given_id=df_url["id"][ind]
-        if given_id!=prev_id:
-            prev_id,df_hold,extracted_types=metadata_compare_one_url(given_id,df_url,df_hold,extracted_types)
-    return df_hold,extracted_types
+        df_url=metadata_score_url(df_url,ind)
+    return df_url
 
-def url_parser_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)->Tuple[str,pd.DataFrame]:
+
+def url_parser_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
     """
-    Parses URLs in the given DataFrame and extracts specific types  based on predefined criteria and updates the 'df_hold' DataFrame accordingly.
-
+    Parses the URL at the specified index of the given DataFrame and calculates a score based on various URL components.
+    
     Args:
-        given_id (str): The given ID associated with the URLs.
-        df2 (pd.DataFrame): The DataFrame containing the URLs to be parsed.
-        df_hold (pd.DataFrame): The DataFrame to hold the extracted URLs and types.
-
+        df_url (pd.DataFrame): The DataFrame containing the URLs.
+        ind (int): The index of the URL to be processed.
+        
     Returns:
-        tuple[str, pd.DataFrame]: A tuple containing the given ID and the updated DataFrame 'df_hold'.
+        pd.DataFrame: The updated DataFrame with the score column modified based on the URL components.
 
-    Raises:
-        None
+    Description:
+        This method extracts the scheme, port, and path from the URL using the `urlparse` function from the `urllib.parse` module.
+        It then evaluates the scheme and port to assign a score to the URL.
+        If the scheme is "https" or the port is "443",the score is incremented by 3.
+        If the scheme is "http" or the port is "80", the score is incremented by 2.
+        If the scheme is "ftp" or the port is "21", the score is incremented by 1. 
+        Additionally, if the path ends withspecific file extensions or contains certain path components, the score is further incremented.
 
     """
-    string_list = ['view','map','wfs','wms','zip','csv','xml']
-    for ind in df2.index:
-        flag=True
-        result=urlparse(df2["url"][ind])
-        #scheme=result.scheme
-        netloc=result.netloc
-        path=result.path
+    result=urlparse(df_url.loc[ind,"url"])
+    scheme=str(result.scheme).lower()
+    port=str(result.port).lower()
+    path=str(result.path).lower()
+    path_ends_with_list=['.zip','.csv','.xml']
+    path_list=['wfs','wms']
+
+    if scheme is not None or port is not None:
+        if scheme=="https" or port=="443":
+            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+3
+        elif scheme=="http" or port=="80":
+            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+2
+        elif scheme=="ftp" or port=="21":
+            df_url.loc[ind,"score"][ind]=int(df_url.loc[ind,"score"])+1
+
+    if path is not None:
+        if any(path.endswith(string) for string in path_ends_with_list):
+            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
+        if any(string in path for string in path_list):
+            df_url[ind,"score"]=int(df_url.loc[ind,"score"])+1
+
+        #netloc=result.netloc
         #params=result.params
         #hostname=result.hostname
-        query=result.query
+        #query=result.query
         #fragment=result.fragment
-        target_string1=df2["url"][ind]
-        target_string2=str(path)
-        target_string3=str(query)
-        target_string4=str(netloc)
-        if target_string1 is not None:
-            if any(string in target_string1 for string in string_list):
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                df_hold['extracted_types'][ind]=target_string1
-                flag=False
-                return given_id,df_hold
+    return df_url
 
-        if target_string2 is not None:
-            if any(string in target_string2 for string in string_list):
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                df_hold['extracted_types'][ind]=target_string1
-                flag=False
-                return given_id,df_hold
-
-        if target_string3 is not None:
-            if any(string in target_string3 for string in string_list):
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                df_hold['extracted_types'][ind]=target_string1
-                flag=False
-                return given_id,df_hold
-
-        if target_string4 is not None:
-            if any(string in target_string4 for string in string_list):
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                df_hold['extracted_types'][ind]=target_string1
-                flag=False
-                return given_id,df_hold
-        if flag:
-            df_hold['extracted_types'][ind]=""
-
-    df_hold = pd.concat([df_hold, df2],ignore_index = True)
-    return given_id,df_hold
-
-def url_parser(df_hold:pd.DataFrame)->pd.DataFrame:
+def url_parser(df_url:pd.DataFrame)->pd.DataFrame:
     """
-    Parses URLs in the given DataFrame and returns a new DataFrame with parsed information.
+    Parses the URLs in the given DataFrame and calculates scores based on various URL components for each URL.
 
     Args:
-        df_hold (pd.DataFrame): The input DataFrame containing URL information.
+        df_url (pd.DataFrame): The DataFrame containing the URLs.
 
     Returns:
-        pd.DataFrame: A new DataFrame with parsed URL information, including columns for access type, protocol, function, name, description, URL, ID, and extracted types.
+        pd.DataFrame: The updated DataFrame with the score column modified based on the URL components of each URL.
 
-    Example:
-        df = pd.DataFrame(...)
-        parsed_df = url_parser(df)
+    Description:
+        This method iterates over each index in the DataFrame and calls the `url_parser_score_url` method to parse 
+        and score the URL at that index. 
+        The `url_parser_score_url` method modifies the score column of the DataFrame based on the URL components. 
+        After processing all URLs, the updated DataFrame is returned.
+
     """
-    prev_id=""
-    df_hold2=pd.DataFrame(columns=["accessType","protocol","function","name","description","url","id","extracted_types"])
-    for ind in df_hold.index:
-        given_id=df_hold["id"][ind]
-        df2=df_hold.loc[df_hold["id"]==given_id]
-        df2=df2.reset_index(drop=True)
-
-        if given_id!=prev_id:
-            prev_id,df_hold2=url_parser_one_url(given_id,df2,df_hold2)
-
-    return df_hold2
+    for ind in df_url.index:
+        df_url=url_parser_score_url(df_url,ind)
+    return df_url
 
 async def fetch_headers(url: str, id_: str, semaphore,responses:List) -> bytes:
     """
@@ -275,86 +237,151 @@ async def get_tasks(given_df: pd.DataFrame,responses: List):
     tasks = [fetch_headers(r['url'], index, semaphore,responses) for index, r in given_df.iterrows()]
     await asyncio.gather(*tasks)
 
-def headers_compare_one_url(given_id:str,df2:pd.DataFrame,df_hold:pd.DataFrame)->Tuple[str,pd.DataFrame]:
+def headers_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
     """
-    Compares headers in a DataFrame with a given list of strings and extracts matching types.
+    Assigns a score to a DataFrame row based on header information.
 
     Args:
-        given_id (str): The given ID.(identifier for the URL)
-        df2 (pd.DataFrame): The DataFrame containing headers and statuses.
-        df_hold (pd.DataFrame): The DataFrame to hold extracted data.
+        df_url (pd.DataFrame): The DataFrame containing URL information.
+        ind (int): The index of the row to be processed.
 
     Returns:
-        tuple[str, pd.DataFrame]: A tuple containing the given ID and the updated DataFrame.
-
-    Note:
-        The function iterates over the DataFrame `df2` and checks the status and header values.
-        If the status is not 0 and is less than 400, and the header contains any of the predefined strings,
-        the corresponding extracted type is assigned to the 'extracted_types' column in `df2`.
-        The rows with extracted types are then appended to `df_hold`.
-        Finally, the function returns a tuple with the given ID and the updated `df_hold` DataFrame.
-
-    """
-    string_list = ['view','map','wfs','wms','zip','xml','csv']
-    for ind in df2.index:
-        target_string=str(df2['header'][ind]).lower()
-        if df2['status'][ind]!=0 and df2['status'][ind]<400 and target_string is not None:
-            if any(string in target_string for string in string_list):
-                df2['extracted_types'][ind]=target_string
-                df_hold = pd.concat([df_hold, df2.iloc[[ind]]],ignore_index = True)
-                return given_id,df_hold
-
-    df_hold = pd.concat([df_hold, df2],ignore_index = True)
-    return given_id,df_hold
-
-def get_headers_compare_url(df_hold2: pd.DataFrame,responses: List)->pd.DataFrame:
-    """
-    Retrieves and compares headers for URLs in a given DataFrame.
-
-    Args:
-        df_hold2 (pd.DataFrame): The DataFrame containing the URLs.
-
-    Returns:
-        pd.DataFrame: A DataFrame containing the results of the header comparison.
-
-    Raises:
-        Any exceptions raised during the execution of the function.
+        pd.DataFrame: The updated DataFrame.
 
     Description:
-        This function retrieves the headers for each URL in the provided DataFrame, compares them, 
-        and returns a new DataFrame with the results of the comparison. 
-        The DataFrame must have a column named 'id' which serves as a unique identifier for each URL. 
-        The function uses asynchronous execution to improve performance.
+        This method calculates a score for the given DataFrame row based on the extracted header information.
+        If the status of the URL is not 0 and is less than 400, and the header contains certain string values,
+        the score is increased by 10.
+        The updated DataFrame is returned.
 
     Example:
-        >>> df = pd.DataFrame({'id': [1, 2, 3], 'url': ['https://example1.com', 'https://example2.com', 'https://example3.com']})
-        >>> result = get_headers_compare_url(df)
-        >>> print(result)
-                id_ind  accessType  protocol   function  ...  header  extracted_types
-        0  1       GET      HTTPS  text/html  ...   OK      [text/html]
-        1  2       GET      HTTPS  text/html  ...   OK      [text/html]
-        2  3       GET      HTTPS  text/html  ...   OK      [text/html]
+        df = headers_score_url(df_url, 0)
+    """
+    string_list = ['wfs','wms','zip','xml','csv']
+    header=str(df_url.loc[ind,'extracted_types']).lower()
+    if df_url.loc[ind,'status']!=0 and df_url.loc[ind,'status']<400 and header is not None:
+        if any(string in header for string in string_list):
+            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+10
+    return df_url
 
+def get_headers_compare_url(df_url: pd.DataFrame,responses: List)->pd.DataFrame:
+    """
+    Retrieves and compares headers for URLs in a DataFrame.
+
+    Args:
+        df_url (pd.DataFrame): The DataFrame containing URL information.
+        responses (List): List to store the responses.
+
+    Returns:
+        pd.DataFrame: The updated DataFrame.
+
+    Description:
+        This method retrieves and compares headers for each URL in the given DataFrame.
+        It utilizes asynchronous tasks to fetch headers for the URLs.
+        The headers and status codes are stored in the responses list.
+        After retrieving the headers, it updates the corresponding rows in the DataFrame with the header information.
+        It then calls the `headers_score_url()` method to assign scores based on the headers.
+        The updated DataFrame is returned.
+
+    Example:
+        df = get_headers_compare_url(df_url, responses)
     """
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(get_tasks(df_hold2,responses))
+    asyncio.run(get_tasks(df_url,responses))
     responses_df=pd.DataFrame(responses,columns=["id_ind","status","header"])
-    df_hold2.reset_index(inplace=True,drop=True)
-    index_name=df_hold2.index.name
-    dataframe3=df_hold2.join(responses_df.set_index("id_ind"),on=index_name,rsuffix=["ulr","id_ind","status","header"])
-    prev_id=""
-    df_hold3=pd.DataFrame(columns=["id_ind","accessType","protocol","function","name","description","url","id","status","header","extracted_types"])
-    for ind in dataframe3.index:
-        given_id=dataframe3["id"][ind]
-        df2=dataframe3.loc[dataframe3["id"]==given_id]
-        df2=df2.reset_index(drop=True)
-        if given_id!=prev_id:
-            prev_id,df_hold3=headers_compare_one_url(given_id,df2,df_hold3)
-    df_hold3=df_hold3.drop(["id_ind"], axis=1)
-    return df_hold3
-
-def get_df_with_extracted_url_and_type(df_url: pd.DataFrame):
+    #keep only what we need from headers
+    for ind in responses_df.index:
+        id_ind=int(responses_df.loc[ind,"id_ind"])
+        if responses_df.loc[ind,"header"] is not None:
+            if ";" in  str(responses_df.loc[ind,"header"]):
+                header=str(responses_df.loc[ind,"header"]).split(";")
+                df_url.loc[id_ind,"extracted_types"]=header[0]
+                if "\/" in header[0]:
+                    header=str(header[0]).split("\/")
+                    df_url.loc[id_ind,"extracted_types"]=header[-1]
+            else:
+                df_url.loc[id_ind,"extracted_types"]=responses_df.loc[ind,"header"]
+        else:
+            df_url.loc[id_ind,"extracted_types"]=responses_df.loc[ind,"header"]
+        df_url.loc[id_ind,"status"]=responses_df.loc[ind,"status"]
+    #scoring
+    for ind in df_url.index:
+        df_url=headers_score_url(df_url,ind)
+    return df_url
+def keep_top_two__url_with_highest_score(df_url: pd.DataFrame)->Tuple[int,int]:
     """
+    Finds and returns the indices of the two highest scores in a DataFrame.
+
+    Args:
+        df_url (pd.DataFrame): A pandas DataFrame containing a 'score' column.
+
+    Returns:
+        Tuple[int, int]: A tuple containing the indices of the two highest scores in the DataFrame.
+
+    Raises:
+        None.
+
+    Description:
+        This method iterates over the DataFrame rows and identifies the two highest scores along with their respective indices.
+        It initializes variables to track the highest and second highest scores and their corresponding indices.
+        The method compares the score of each row with the highest score found so far.
+        If a higher score is found, the second highest score and its index are updated,
+        and the highest score and its index are updated accordingly.
+        Finally, the method returns a tuple containing the indices of the two highest scores.
+
+    Example:
+        >>> df = pd.DataFrame({'score': [3, 5, 2, 7, 1]})
+        >>> keep_top_two_score(df)
+        (3, 1)
+    """
+    max_score1=-1
+    max_ind1=-1
+    max_score2=-1
+    max_ind2=-1
+    for ind in df_url.index:
+        if int(df_url.loc[ind,"score"])>max_score1:
+            max_score2=max_score1
+            max_ind2=max_ind1
+            max_score1=int(df_url.loc[ind,"score"])
+            max_ind1=ind
+        elif int(df_url.loc[ind,"score"])>max_score2:
+            max_score2=int(df_url.loc[ind,"score"])
+            max_ind2=ind
+    return max_ind1,max_ind2
+
+def keep_url_with_highest_score(df_url: pd.DataFrame)-> int:
+    """
+    Finds and returns the index of the URL with the highest score from the given DataFrame.
+
+    Args:
+        df_url (pd.DataFrame): A DataFrame containing URL information and their scores.
+
+    Returns:
+        int: The index of the URL with the highest score.
+
+    Description:
+        This method iterates through the rows of the provided DataFrame to identify the URL with the highest score.
+        The score is expected to be a numerical value associated with each URL.
+        The method compares each score with the current maximum score and updates it if a higher score is found.
+        Finally, it returns the index of the URL with the highest score.
+
+    Raises:
+        None
+
+    Example:
+        >>> df = pd.DataFrame({'url': ['www.example.com', 'www.openai.com', 'www.python.org'],
+        ...                    'score': [8, 9, 6]})
+        >>> keep_url_with_highest_score(df)
+        1
+    """
+    max_score=-1
+    max_ind=-1
+    for ind in df_url.index:
+        if int(df_url.loc[ind,"score"])>max_score:
+            max_score=int(df_url.loc[ind,"score"])
+            max_ind=ind
+    return max_ind
+"""
     Extracts URL types from a DataFrame and returns a new DataFrame with additional columns for extracted types.
     
     Args:
@@ -366,11 +393,69 @@ def get_df_with_extracted_url_and_type(df_url: pd.DataFrame):
         columns: ['accessType', 'protocol', 'function', 'name', 'description', 'url', 'id', 'status', 'header', 'extracted_types']
 
     """
+def get_df_with_extracted_url_and_type(dict_input: pd.DataFrame)->pd.DataFrame:
+    """
+    Extracts URLs and their corresponding types from a dictionary input and returns a DataFrame with the extracted data.
+
+    Args:
+        dict_input (pd.DataFrame): A dictionary containing id as keys  and their URLs and metadata as values.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the extracted URLs, IDs, and extracted types.(columns=[id,url,extracted_types])
+        
+    Description:
+        This method takes a dictionary `dict_input` containing id as keys  and their URLs and metadata as values. 
+        It processes each URL in the dictionary to extract the URL and its type.
+        The processing involves comparing metadata, parsing the URL, and comparing headers to determine the most relevant URL 
+        and its extracted type.
+        The method creates a new DataFrame `df_result` to store the extracted URL, ID, and extracted types for each id in the input dictionary.
+
+    Raises:
+        None
+
+    Example:
+        dict_input = {
+            "id1": [{
+                "url": "https://example.com",
+                "meta_data": "some data",
+                ...
+                "function":"some data",
+                "description":"some data",
+            },
+            {
+                "url": "https://example2.com",
+                "meta_data": "some data",
+                ...
+                "function":"some data",
+                "description":"some data",
+            }],
+            "id2": [{
+                "url": "https://example.net",
+                "data": "some other data"
+            }]
+        }
+        df_result = get_df_with_extracted_url_and_type(dict_input)
+    """
     responses=[]
-    df_hold,extracted_types=metadata_compare_url(df_url)
-    df_url["extracted_types"]=extracted_types
+    df_result=pd.DataFrame(columns=["id","url","extracted_types"])
 
-    df_hold2=url_parser(df_hold)
+    for key in dict_input.keys():
+        df_url_for_one_id= pd.DataFrame.from_dict(dict_input[key])
 
-    df_hold3=get_headers_compare_url(df_hold2,responses)
-    return df_hold3
+        df_url_for_one_id=metadata_compare_url(df_url_for_one_id)
+
+        df_url_for_one_id=url_parser(df_url_for_one_id)
+        if len(df_url_for_one_id)>2:
+            #keep best 2 urls if >2
+            max_ind1,max_ind2=keep_top_two__url_with_highest_score(df_url_for_one_id)
+            new_row=[{'url':df_url_for_one_id["url"][max_ind1],'score':df_url_for_one_id["score"][max_ind1]},{'url':df_url_for_one_id["url"][max_ind2],'score':df_url_for_one_id["score"][max_ind2]}]
+            df_url_for_one_id=pd.DataFrame.from_dict(new_row)
+
+        df_url_for_one_id["extracted_types"]=""
+        df_url_for_one_id["status"]=""
+        df_url_for_one_id=get_headers_compare_url(df_url_for_one_id,responses)
+        #choose url with best score
+        max_ind=keep_url_with_highest_score(df_url_for_one_id)
+        new_row={'id':key,'url':df_url_for_one_id["url"][max_ind],'extracted_types':df_url_for_one_id["extracted_types"][max_ind]}
+        df_result = df_result.append(new_row, ignore_index=True)
+    return df_result
