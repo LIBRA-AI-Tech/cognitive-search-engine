@@ -39,7 +39,9 @@ setuptools.setup(
         "nest-asyncio>=1.5.6,<=1.6.0",
         "urllib3>=1.26.15,<=1.27.0",
         "aiohttp>=3.8.4,<=3.9.0",
-        "aiolimiter>=1.1.0,<=1.2.0"
+        "aiolimiter>=1.1.0,<=1.2.0",
+        "googlesearch>=1.2.3,<=1.3.0 ",
+        "bs4>=0.0.1,<=0.1.0"
     ],
     package_data={'geoss_search': ['logging.conf']},
     python_requires='>=3.7',

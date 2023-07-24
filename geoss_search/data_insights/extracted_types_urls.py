@@ -4,9 +4,9 @@ Module Name: extracted_types_urls
 This module contains functions for processing and analyzing metadata and URLs.It is comparing and extracting metadata and types from URLs.
 
 Functions:
-- metadata_score_url(df_url: pd.DataFrame, ind: int) -> Tuple[pd.DataFrame]: 
+- metadata_score_url(df_url: pd.DataFrame, ind: int) -> pd.DataFrame: 
     Calculates a score for each row in the DataFrame based on the values in the "function" and "description" columns.
-- metadata_compare_url(df_url: pd.DataFrame) -> Tuple[pd.DataFrame]:
+- metadata_compare_url(df_url: pd.DataFrame) -> pd.DataFrame:
     Compares metadata in the DataFrame and assigns scores to each row based on specific conditions.
 - url_parser_score_url(df_url: pd.DataFrame, ind: int) -> pd.DataFrame:
     Parses the URL at the specified index of the given DataFrame and calculates a score based on various URL components.
@@ -36,7 +36,7 @@ from aiolimiter import AsyncLimiter
 import pandas as pd
 
 
-def metadata_score_url(df_url: pd.DataFrame,ind:int)->Tuple[pd.DataFrame]:
+def metadata_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
     """
     Calculates a score for each row in the DataFrame based on the values in the "function" and "description" columns.
 
@@ -45,15 +45,13 @@ def metadata_score_url(df_url: pd.DataFrame,ind:int)->Tuple[pd.DataFrame]:
         ind (int): The index of the row to be processed.
 
     Returns:
-        Tuple[pd.DataFrame]: The updated DataFrame with the calculated scores.
+        pd.DataFrame: The updated DataFrame with the calculated scores.
 
     Description:
         This function calculates a score for each row in the DataFrame based on the values in the "function" and "description" columns.
         If the "function" value is "download", the score is incremented by 1.
         If any of the strings in the description_list is found in the lowercase "description" value, the score is incremented by 1. 
         The updated DataFrame with the calculated scores is returned.
-
-
     """
 
     # function_value and description_value are converted to lowercase
@@ -73,7 +71,7 @@ def metadata_score_url(df_url: pd.DataFrame,ind:int)->Tuple[pd.DataFrame]:
     return df_url
 
 
-def metadata_compare_url(df_url: pd.DataFrame)->Tuple[pd.DataFrame]:
+def metadata_compare_url(df_url: pd.DataFrame)->pd.DataFrame:
     """
     Compares metadata in the DataFrame and assigns scores to each row based on specific conditions.
 
@@ -81,14 +79,13 @@ def metadata_compare_url(df_url: pd.DataFrame)->Tuple[pd.DataFrame]:
         df_url (pd.DataFrame): The DataFrame containing the metadata information.
 
     Returns:
-        Tuple[pd.DataFrame]: The DataFrame with updated scores for each row.
+        pd.DataFrame: The DataFrame with updated scores for each row.
 
     Description:
         This function compares the metadata in the DataFrame and assigns scores to each row based on specific conditions.
         It initializes the 'score' column in the DataFrame to zero.
         Then, it iterates over each row in the DataFrame and calls the metadata_score_url function to calculate the score for that row.
         Finally, the DataFrame with the updated scores is returned.
-
     """
 
     # Initializing the 'score' column in the DataFrame to zero
@@ -100,7 +97,7 @@ def metadata_compare_url(df_url: pd.DataFrame)->Tuple[pd.DataFrame]:
     return df_url
 
 
-def url_parser_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
+def url_parser_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
     """
     Parses the URL at the specified index of the given DataFrame and calculates a score based on various URL components.
     
@@ -118,7 +115,6 @@ def url_parser_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
         If the scheme is "http" or the port is "80", the score is incremented by 2.
         If the scheme is "ftp" or the port is "21", the score is incremented by 1. 
         Additionally, if the path ends withspecific file extensions or contains certain path components, the score is further incremented.
-
     """
     result=urlparse(df_url.loc[ind,"url"])
     scheme=str(result.scheme).lower()
@@ -140,7 +136,6 @@ def url_parser_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
             df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
         if any(string in path for string in path_list):
             df_url[ind,"score"]=int(df_url.loc[ind,"score"])+1
-
         #netloc=result.netloc
         #params=result.params
         #hostname=result.hostname
@@ -148,7 +143,7 @@ def url_parser_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
         #fragment=result.fragment
     return df_url
 
-def url_parser(df_url:pd.DataFrame)->pd.DataFrame:
+def url_parser(df_url: pd.DataFrame)->pd.DataFrame:
     """
     Parses the URLs in the given DataFrame and calculates scores based on various URL components for each URL.
 
@@ -163,13 +158,12 @@ def url_parser(df_url:pd.DataFrame)->pd.DataFrame:
         and score the URL at that index. 
         The `url_parser_score_url` method modifies the score column of the DataFrame based on the URL components. 
         After processing all URLs, the updated DataFrame is returned.
-
     """
     for ind in df_url.index:
         df_url=url_parser_score_url(df_url,ind)
     return df_url
 
-async def fetch_headers(url: str, id_: str, semaphore,responses:List) -> bytes:
+async def fetch_headers(url: str, id_: str, semaphore: asyncio.Semaphore, responses: List[str]) -> bytes:
     """
     Fetches the headers for a given URL asynchronously using aiohttp.
 
@@ -209,7 +203,7 @@ async def fetch_headers(url: str, id_: str, semaphore,responses:List) -> bytes:
             responses.append(response)
             semaphore.release()
 
-async def get_tasks(given_df: pd.DataFrame,responses: List):
+async def get_tasks(given_df: pd.DataFrame, responses: List[str]):
     """
     Asynchronously fetches headers for URLs in a given DataFrame.
 
@@ -231,13 +225,12 @@ async def get_tasks(given_df: pd.DataFrame,responses: List):
         - It uses an asyncio.Semaphore to limit the number of concurrent tasks to 100.
         - The function awaits the completion of all tasks using `asyncio.gather()`.
         - Any exceptions raised by `fetch_headers()` are propagated to the caller.
-
     """
     semaphore = asyncio.Semaphore(value=100)
     tasks = [fetch_headers(r['url'], index, semaphore,responses) for index, r in given_df.iterrows()]
     await asyncio.gather(*tasks)
 
-def headers_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
+def headers_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
     """
     Assigns a score to a DataFrame row based on header information.
 
@@ -264,7 +257,7 @@ def headers_score_url(df_url:pd.DataFrame,ind:int)->pd.DataFrame:
             df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+10
     return df_url
 
-def get_headers_compare_url(df_url: pd.DataFrame,responses: List)->pd.DataFrame:
+def get_headers_compare_url(df_url: pd.DataFrame, responses: List[str])->pd.DataFrame:
     """
     Retrieves and compares headers for URLs in a DataFrame.
 
@@ -308,6 +301,7 @@ def get_headers_compare_url(df_url: pd.DataFrame,responses: List)->pd.DataFrame:
     for ind in df_url.index:
         df_url=headers_score_url(df_url,ind)
     return df_url
+
 def keep_top_two__url_with_highest_score(df_url: pd.DataFrame)->Tuple[int,int]:
     """
     Finds and returns the indices of the two highest scores in a DataFrame.
@@ -381,18 +375,7 @@ def keep_url_with_highest_score(df_url: pd.DataFrame)-> int:
             max_score=int(df_url.loc[ind,"score"])
             max_ind=ind
     return max_ind
-"""
-    Extracts URL types from a DataFrame and returns a new DataFrame with additional columns for extracted types.
-    
-    Args:
-        df_url (pd.DataFrame): The input DataFrame containing URLs.
-        columns=['accessType', 'protocol', 'function', 'name','description', 'url','id']
-        
-    Returns:
-        pd.DataFrame: A new DataFrame with additional columns for extracted URL types.
-        columns: ['accessType', 'protocol', 'function', 'name', 'description', 'url', 'id', 'status', 'header', 'extracted_types']
 
-    """
 def get_df_with_extracted_url_and_type(dict_input: pd.DataFrame)->pd.DataFrame:
     """
     Extracts URLs and their corresponding types from a dictionary input and returns a DataFrame with the extracted data.
