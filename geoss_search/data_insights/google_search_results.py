@@ -10,7 +10,7 @@ Module Contents:
     - get_description(url: str) -> str: Fetches the description of a web page or the text content of a PDF file from the given URL.
     - search_with_retry(search_term: str, num_results: int, retry_attempts: int = 3) -> List: Perform a web search using the specified search term and return a list of search results.
     - search_with_delay(search_term: str, num_results: int, delay_between_searches: int = 5, retry_attempts: int = 3) -> List: Perform a search with a specified search term 
-                                                                                                                                                                        and retrieve search results with a delay between each search.
+                                                                                                                               and retrieve search results with a delay between each search.
     - send_multiple_texts_to_google_search(df_searches: pd.DataFrame, number_of_links: int) -> pd.DataFrame: Searches Google for multiple texts and retrieves search results.
 
 Dependencies:
@@ -50,7 +50,7 @@ import requests
 import pandas as pd
 from pypdf import PdfReader
 
-def get_pdf_text(response:requests)->str:
+def get_pdf_text(response: requests)->str:
     """
     Extracts the text content from a PDF (url) file.
 
@@ -75,14 +75,14 @@ def get_pdf_text(response:requests)->str:
             print("Failed to extract text from the PDF.")
     """
     try:
-        f = io.BytesIO(response.content)
-        reader = PdfReader(f)
+        file = io.BytesIO(response.content)
+        reader = PdfReader(file)
         if reader is not None:
             contents = reader.pages[0].extract_text()
             return contents
         else:
             return None
-    except Exception as exception:
+    except Exception:
         return None
 
 def get_description(url: str)-> str:
@@ -101,16 +101,20 @@ def get_description(url: str)-> str:
 
     Notes:
         This function tries multiple methods to extract the description, prioritizing as follows:
-        1. If the URL ends with '.pdf', it will attempt to extract text from the PDF content.
-        2. If the web page contains a 'description' meta tag, it will use its content.
-        3. If the web page contains an 'og:description' meta tag, it will use its content.
-        4. If there are other 'meta' tags with names like 'description', 'Description', or 'DESCRIPTION',
+        
+        1. If the web page contains a 'description' meta tag, it will use its content.
+        2. If the web page contains an 'og:description' meta tag, it will use its content.
+        3. If there are other 'meta' tags with names like 'description', 'Description', or 'DESCRIPTION',
            it will use their content.
-        5. It will check for other attributes like 'data-description', 'data-desc', or 'data-info'
+        4. It will check for other attributes like 'data-description', 'data-desc', or 'data-info'
            that might contain the description.
-        6. It will look for <p> tags with text that resembles the description.
-        7. If the description is found within <meta name="description" content="..."> tags within 'noscript' tags.
-
+        5. It will look for <p> tags with text that resembles the description.
+        6. If the description is found within <meta name="description" content="..."> tags within 'noscript' tags.
+        7. If the web page contains a 'keywords' meta tag, it will use its content.
+        8. If there are is 'description' tag, it will use first content.
+        9. If there are is 'title' tag, it will use first content.
+        10. If the URL ends with '.pdf', it will attempt to extract text from the PDF content.
+        
         If any of the methods succeed, it returns the description; otherwise, it returns "Description not found".
         If an error occurs during the process, it prints an error message and returns None.
 
@@ -120,42 +124,36 @@ def get_description(url: str)-> str:
     """
     try:
         response = requests.get(url,timeout=10)
-        # Method 1: Check for the 'url' ends with '.pdf'
-        if url.endswith(".pdf"):
-            description=get_pdf_text(response)
-            if description is not None:
-                return description
-
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Method 2: Check for the 'description' meta tag
+        # Method 1: Check for the 'description' meta tag
         description = soup.find('meta', attrs={"name": "description"})
         if description is not None:
             return description.get('content')
 
-        # Method 3: Check for the 'og:description' meta tag
+        # Method 2: Check for the 'og:description' meta tag
         description = soup.find('meta', property='og:description')
         if description is not None:
             return description.get('content')
 
-        # Method 4: Check for other meta tags that might contain the description
+        # Method 3: Check for other meta tags that might contain the description
         for tag in soup.find_all('meta'):
             if tag.get('name') in ["description", "Description", "DESCRIPTION"]:
                 return tag.get('content')
 
-        # Method 5: Check for other attributes that might contain the description
+        # Method 4: Check for other attributes that might contain the description
         possible_attributes = ["data-description", "data-desc", "data-info"]
         for attr in possible_attributes:
             description = soup.find(attrs={attr: True})
             if description is not None:
                 return description.get(attr)
-        # Method 6: Check for <p> tags with text that might resemble the description
+        # Method 5: Check for <p> tags with text that might resemble the description
         paragraphs = soup.find_all('p')
         for paragraph in paragraphs:
             text = paragraph.get_text(strip=True)
             if len(text) > 20 and len(text) < 300:  # Assuming the description length falls within this range
                 return text
-        # Method 7: Check for <meta name="description" content="..."> within noscript tags
+        # Method 6: Check for <meta name="description" content="..."> within noscript tags
         noscript_tags = soup.find_all('noscript')
         for noscript in noscript_tags:
             noscript_soup = BeautifulSoup(str(noscript), 'html.parser')
@@ -163,20 +161,28 @@ def get_description(url: str)-> str:
             if description is not None:
                 return description.get('content')
 
-        #Method 8:Check for the 'keywords' meta tag
+        #Method 7:Check for the 'keywords' meta tag
         description = soup.find('meta', attrs={"name": "keywords"})
         if description is not None:
             return description.get('content')
 
-        #Method 9: Check for <description>
-        description = soup.find("description").contents
+        #Method 8: Check for <description>
+        description = soup.find("description")
         if description is not None:
-            return str(description[0])
+            if description.contents is not None:
+                return str(description.contents[0])
 
-        #Method 10 :Get the title as description
-        description = soup.find("title").contents
+        #Method 9 :Get the title as description
+        description = soup.find("title")
         if description is not None:
-            return str(description[0])
+            if description.contents is not None:
+                return str(description.contents[0])
+
+        #Method 10: Check for the 'url' ends with '.pdf'
+        if url.endswith(".pdf"):
+            description=get_pdf_text(response)
+            if description is not None:
+                return description
 
         return "Description not found"
 
@@ -320,7 +326,7 @@ def send_multiple_texts_to_google_search(df_searches: pd.DataFrame, number_of_li
         elif df_searches.loc[ind, "description"] is not None:
             text=df_searches.loc[ind, "description"]
         elif df_searches.loc[ind, "title"] is not None:
-             text=df_searches.loc[ind, "title"]
+            text=df_searches.loc[ind, "title"]
         else:
             text=None
         results =search_with_delay(text, number_of_links)
