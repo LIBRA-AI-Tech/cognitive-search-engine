@@ -118,8 +118,6 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
         if len(terms) == 1:
             terms = terms[0]
         handler = handler.filter(key, terms)
-    if (params.geoss_data_core):
-        handler = handler.filter('rights', 'geossdatacore')
     
     for name, field in {'keyword': 'keyword', 'format': 'format', 'protocol': 'online.protocol', 'organisation': 'origOrgDesc', 'source': 'source.id'}.items():
         agg = Aggregation()
