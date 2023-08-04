@@ -323,7 +323,7 @@ services:
         target: /var/local/certs
         read_only: true
     working_dir: /usr/local/geoss_search/geoss_search
-    command: ["celery", "--app=tasks", "worker", "--loglevel=INFO", "--max-tasks-per-child=1"]
+    command: ["celery", "--app=geoss_search.tasks", "worker", "--loglevel=INFO", "--max-tasks-per-child=1"]
     environment:
       - CELERY_BROKER_URL=redis://redisai:6379/0
       - CELERY_RESULT_BACKEND=redis://redisai:6379/0
