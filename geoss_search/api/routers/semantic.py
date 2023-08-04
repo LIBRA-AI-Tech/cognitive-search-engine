@@ -12,7 +12,7 @@ router = APIRouter(
 @router.get('/filter', response_model=SemanticFilterResponse, summary="Sort and filter approach", description="Perform a semantic search based on the provided query, returning a list of record IDs with similarity score above the given threshold.")
 async def filter_query(
     query: str = Query(..., description="Query string for semantic search. Search is performed in *title*, *description*, and *keyword* attributes of metadata.", example="inland water pollution"),
-    threshold: float = Query(0.65, description="Threshold for cosine similarity search; a value between 0 and 1", le=1.0, ge=0.0)
+    threshold: float = Query(0.7, description="Threshold for cosine similarity search; a value between 0 and 1", le=1.0, ge=0.0)
 ):
     handler = SemanticSearch(es=es)
     handler = handler.query(query)
