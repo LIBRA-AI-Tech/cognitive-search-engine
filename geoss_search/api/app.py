@@ -7,7 +7,7 @@ from geoss_search.schemata.general import HealthResults
 from geoss_search._version import __version__
 
 from .internal import admin
-from .routers import search, ontology
+from .routers import search, ontology, semantic
 from .dependencies import es
 
 app = FastAPI(
@@ -18,6 +18,7 @@ app = FastAPI(
 )
 app.include_router(search.router)
 app.include_router(ontology.router)
+app.include_router(semantic.router)
 app.include_router(admin.router)
 redis_pool = redis.ConnectionPool(host='redisai', port=6379, db=0)
 
