@@ -34,7 +34,7 @@ from typing import List, Tuple
 import aiohttp
 from aiolimiter import AsyncLimiter
 import pandas as pd
-
+import json
 
 def metadata_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
     """
@@ -96,7 +96,6 @@ def metadata_compare_url(df_url: pd.DataFrame)->pd.DataFrame:
         df_url=metadata_score_url(df_url,ind)
     return df_url
 
-
 def url_parser_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
     """
     Parses the URL at the specified index of the given DataFrame and calculates a score based on various URL components.
@@ -116,31 +115,36 @@ def url_parser_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
         If the scheme is "ftp" or the port is "21", the score is incremented by 1. 
         Additionally, if the path ends withspecific file extensions or contains certain path components, the score is further incremented.
     """
-    result=urlparse(df_url.loc[ind,"url"])
-    scheme=str(result.scheme).lower()
-    port=str(result.port).lower()
-    path=str(result.path).lower()
-    path_ends_with_list=['.zip','.csv','.xml']
-    path_list=['wfs','wms']
+    if df_url.loc[ind,"url"] is not None:
+        df_url.loc[ind,"url"]=df_url.loc[ind,"url"].replace("\\","")
 
-    if scheme is not None or port is not None:
-        if scheme=="https" or port=="443":
-            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+3
-        elif scheme=="http" or port=="80":
-            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+2
-        elif scheme=="ftp" or port=="21":
-            df_url.loc[ind,"score"][ind]=int(df_url.loc[ind,"score"])+1
+        result=urlparse(df_url.loc[ind,"url"])
+        scheme=str(result.scheme).lower()
+        port=str(result.port).lower()
+        path=str(result.path).lower()
+        path_ends_with_list=['.zip','.csv','.xml']
+        path_list=['wfs','wms']
 
-    if path is not None:
-        if any(path.endswith(string) for string in path_ends_with_list):
-            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
-        if any(string in path for string in path_list):
-            df_url[ind,"score"]=int(df_url.loc[ind,"score"])+1
-        #netloc=result.netloc
-        #params=result.params
-        #hostname=result.hostname
-        #query=result.query
-        #fragment=result.fragment
+        if scheme is not None or port is not None:
+            if scheme=="https" or port=="443":
+                df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+3
+            elif scheme=="http" or port=="80":
+                df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+2
+            elif scheme=="ftp" or port=="21":
+                df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
+
+        if path is not None:
+            if any(path.endswith(string) for string in path_ends_with_list):
+                df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+1
+            if any(string in path for string in path_list):
+                df_url[ind,"score"]=int(df_url.loc[ind,"score"])+1
+            #netloc=result.netloc
+            #params=result.params
+            #hostname=result.hostname
+            #query=result.query
+            #fragment=result.fragment
+    else:
+        df_url[ind,"score"]=int(df_url.loc[ind,"score"])-100
     return df_url
 
 def url_parser(df_url: pd.DataFrame)->pd.DataFrame:
@@ -250,11 +254,23 @@ def headers_score_url(df_url: pd.DataFrame, ind: int)->pd.DataFrame:
     Example:
         df = headers_score_url(df_url, 0)
     """
-    string_list = ['wfs','wms','zip','xml','csv']
+    string_list_best = ['wfs','wms','zip','xml','tif','tab','stream','netcdf','image','download']
+    string_list_second =['text','msword','excel','powerpoint','pdf','csv']
     header=str(df_url.loc[ind,'extracted_types']).lower()
+
     if df_url.loc[ind,'status']!=0 and df_url.loc[ind,'status']<400 and header is not None:
-        if any(string in header for string in string_list):
-            df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+10
+        if any(string in header for string in string_list_best):
+            if(df_url.loc[ind,"score"] is None or 'nan' in str(df_url.loc[ind,"score"]).lower()):
+                print("no")
+            else:
+                df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+10
+
+        elif any(string in header for string in string_list_second):
+            if(df_url.loc[ind,"score"] is None or 'nan' in str(df_url.loc[ind,"score"]).lower()):
+                print("no")
+            else:
+                df_url.loc[ind,"score"]=int(df_url.loc[ind,"score"])+5
+
     return df_url
 
 def get_headers_compare_url(df_url: pd.DataFrame, responses: List[str])->pd.DataFrame:
@@ -333,6 +349,7 @@ def keep_top_two__url_with_highest_score(df_url: pd.DataFrame)->Tuple[int,int]:
     max_score2=-1
     max_ind2=-1
     for ind in df_url.index:
+
         if int(df_url.loc[ind,"score"])>max_score1:
             max_score2=max_score1
             max_ind2=max_ind1
@@ -371,6 +388,9 @@ def keep_url_with_highest_score(df_url: pd.DataFrame)-> int:
     max_score=-1
     max_ind=-1
     for ind in df_url.index:
+
+        if(df_url.loc[ind,"score"] is None or 'nan' in str(df_url.loc[ind,"score"]).lower()):
+            df_url.loc[ind,"score"]=-1
         if int(df_url.loc[ind,"score"])>max_score:
             max_score=int(df_url.loc[ind,"score"])
             max_ind=ind
@@ -423,22 +443,29 @@ def get_df_with_extracted_url_and_type(dict_input: pd.DataFrame)->pd.DataFrame:
     df_result=pd.DataFrame(columns=["id","url","extracted_types"])
 
     for key in dict_input.keys():
+        print(key)
         df_url_for_one_id= pd.DataFrame.from_dict(dict_input[key])
 
-        df_url_for_one_id=metadata_compare_url(df_url_for_one_id)
+        for ind in df_url_for_one_id.index:
+            if(df_url_for_one_id['url'][ind] is None or 'nan' in df_url_for_one_id['url'][ind]):
+                df_url_for_one_id = df_url_for_one_id.drop(labels=ind, axis=0)
+        if len(df_url_for_one_id)>0:
+            df_url_for_one_id=metadata_compare_url(df_url_for_one_id)
 
-        df_url_for_one_id=url_parser(df_url_for_one_id)
-        if len(df_url_for_one_id)>2:
-            #keep best 2 urls if >2
-            max_ind1,max_ind2=keep_top_two__url_with_highest_score(df_url_for_one_id)
-            new_row=[{'url':df_url_for_one_id["url"][max_ind1],'score':df_url_for_one_id["score"][max_ind1]},{'url':df_url_for_one_id["url"][max_ind2],'score':df_url_for_one_id["score"][max_ind2]}]
-            df_url_for_one_id=pd.DataFrame.from_dict(new_row)
+            df_url_for_one_id=url_parser(df_url_for_one_id)
 
-        df_url_for_one_id["extracted_types"]=""
-        df_url_for_one_id["status"]=""
-        df_url_for_one_id=get_headers_compare_url(df_url_for_one_id,responses)
-        #choose url with best score
-        max_ind=keep_url_with_highest_score(df_url_for_one_id)
-        new_row={'id':key,'url':df_url_for_one_id["url"][max_ind],'extracted_types':df_url_for_one_id["extracted_types"][max_ind]}
-        df_result = df_result.append(new_row, ignore_index=True)
+            if len(df_url_for_one_id)>2:
+                #keep best 2 urls if >2
+                max_ind1,max_ind2=keep_top_two__url_with_highest_score(df_url_for_one_id)
+                new_row=[{'url':df_url_for_one_id["url"][max_ind1],'score':df_url_for_one_id["score"][max_ind1]},{'url':df_url_for_one_id["url"][max_ind2],'score':df_url_for_one_id["score"][max_ind2]}]
+                df_url_for_one_id=pd.DataFrame.from_dict(new_row)
+
+            df_url_for_one_id["extracted_types"]=""
+            df_url_for_one_id["status"]=""
+            df_url_for_one_id=get_headers_compare_url(df_url_for_one_id,responses)
+
+            #choose url with best score
+            max_ind=keep_url_with_highest_score(df_url_for_one_id)
+            new_row={'id':key,'url':df_url_for_one_id["url"][max_ind],'extracted_types':df_url_for_one_id["extracted_types"][max_ind]}
+            df_result = df_result.append(new_row, ignore_index=True)
     return df_result

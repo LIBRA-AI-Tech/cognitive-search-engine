@@ -139,7 +139,8 @@ def get_description(url: str)-> str:
         # Method 3: Check for other meta tags that might contain the description
         for tag in soup.find_all('meta'):
             if tag.get('name') in ["description", "Description", "DESCRIPTION"]:
-                return tag.get('content')
+                if tag.get('content') is not None:
+                    return tag.get('content')
 
         # Method 4: Check for other attributes that might contain the description
         possible_attributes = ["data-description", "data-desc", "data-info"]
@@ -234,12 +235,12 @@ def search_with_retry(search_term: str, num_results: int, retry_attempts=3)-> Li
     print("Failed to perform the search after multiple attempts.")
     return None
 
-def search_with_delay(search_term: str, num_results : int, delay_between_searches=5 , retry_attempts=3)-> List:
+def search_with_delay(text: str, num_results : int, delay_between_searches=5 , retry_attempts=3)-> List:
     """
     Perform a search with a specified search term and retrieve search results with a delay between each search.
 
     Args:
-        search_term (str): The term to search for.
+        text (str): The term to search for.
         num_results (int): The number of search results to retrieve.
         delay_between_searches (int, optional): The time (in seconds) to wait between each search. Defaults to 5 seconds.
         retry_attempts (int, optional): The number of retry attempts in case of a failed search. Defaults to 3.
@@ -251,7 +252,7 @@ def search_with_delay(search_term: str, num_results : int, delay_between_searche
         This function relies on the `search_with_retry` function to perform the actual search with retry attempts
         in case of failures. The `get_description` function is used to obtain the description of each search result.
 
-        If the `search_term` is `None`, or if no search results are found, an empty list is returned.
+        If the `text` is `None`, or if no search results are found, an empty list is returned.
 
         The function introduces a delay between consecutive searches to prevent overwhelming the search service
         and to avoid potential restrictions due to high query rates.
@@ -275,8 +276,8 @@ def search_with_delay(search_term: str, num_results : int, delay_between_searche
          ['https://www.example.com/python-tutorial-5', "Explore Python's object-oriented programming features."]]
     """
     results=[]
-    if search_term is not None:
-        search_results = search_with_retry(search_term, num_results, retry_attempts)
+    if text is not None:
+        search_results = search_with_retry(text, num_results, retry_attempts)
         if search_results is not None:
             for result in search_results:
                 description = get_description(result)
@@ -321,7 +322,7 @@ def send_multiple_texts_to_google_search(df_searches: pd.DataFrame, number_of_li
     df_results = pd.DataFrame(columns=["text","id", "results"])
     for ind in df_searches.index:
         id_text=df_searches.loc[ind, "id"]
-        if df_searches.loc[ind, "description"] is not None and df_searches.loc[ind, "title"]:
+        if df_searches.loc[ind, "description"] is not None and df_searches.loc[ind, "title"] is not None:
             text=str(df_searches.loc[ind, "title"])+" "+df_searches.loc[ind, "description"]
         elif df_searches.loc[ind, "description"] is not None:
             text=df_searches.loc[ind, "description"]
