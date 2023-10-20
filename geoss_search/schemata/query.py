@@ -121,6 +121,24 @@ class QueryModel(QueryBaseModel):
         description="[**FILTER**] Only records with originator organisation name included in this list will be returned.",
         example="GFZ Potsdam",
     ))
+    ontology: Optional[str]=Field(Query(
+        None,
+        title="Ontology",
+        description="[**FILTER**] Only records with the specific ontology will be returned",
+        example="sdg"
+    ))
+    concept: Optional[str]=Field(Query(
+        None,
+        title="Ontology Concept",
+        description="[**FILTER**] Only records with the specific ontology concept will be returned",
+        example="goal"
+    ))
+    individual: Optional[str]=Field(Query(
+        None,
+        title="Ontology Individual",
+        description="[**FILTER**] Only records with the specific ontology individual will be returned",
+        example="http://metadata.un.org/sdg/1"
+    ))
     geoss_data_core: bool=Field(Query(
         False,
         alias="geossDataCore",

@@ -71,6 +71,9 @@ class SignificantTermsList(BaseModel):
     source: List[SignificantSources] = Query(..., description="Significant sources, sorted by significance score")
     protocol: List[SignificantTerms] = Query(..., description="Significant protocols, sorted by significance score")
     organisation: List[SignificantTerms] = Query(..., description="Significant organisations, sorted by significance score")
+    ontology: List[SignificantTerms] = Query(..., description="Significant ontologies, sorted by significance score")
+    concept: List[SignificantTerms] = Query(..., description="Significant ontology concepts, sorted by significance score")
+    individual: List[SignificantTerms] = Query(..., description="Significant ontology individuals, sorted by significance score")
 
 class SearchResults(BaseModel):
     """Output of search query."""
