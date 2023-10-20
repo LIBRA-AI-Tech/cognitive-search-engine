@@ -37,7 +37,6 @@ def _update_job_status(token, **kwargs):
 def ingest_data_task(self, path: str, embeddings: str, elastic_index: str):
     token = self.request.id
     try:
-        pass
         _update_job_status(token, status="active")
         if not es.indices.exists(index=elastic_index):
             _create_elastic_index(es, index=elastic_index, with_schema=os.getenv('INIT_DATA_SCHEMA'))

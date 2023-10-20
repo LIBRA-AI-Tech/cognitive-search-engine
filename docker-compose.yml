@@ -288,7 +288,7 @@ services:
       - ELASTIC_INDEX=${ELASTIC_INDEX}
       - SEARCH_SIZE=${SEARCH_SIZE}
       - INIT_DATA=/var/local/metadata/data/
-      - INIT_DATA_SCHEMA=/var/local/metadata/schema.yml
+      - INIT_DATA_SCHEMA=/usr/local/geoss_search/elastic_schema.yml
       - ADMIN_KEY=${ADMIN_KEY}
       - API_KEY=${API_KEY}
       - REDIS_HOST=redisai

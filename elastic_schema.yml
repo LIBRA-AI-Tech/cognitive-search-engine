@@ -1,0 +1,169 @@
+created:
+  type: date
+  format: yyyy-MM-dd
+  index: true
+  ignore_malformed: true
+format:
+  type: keyword
+  index: true
+description:
+  type: text
+  index: true
+source:
+  properties:
+    id:
+      type: keyword
+      index: true
+    title:
+      type: keyword
+      index: true
+attributeDescription:
+  type: text
+  index: false
+attributeTitle:
+  type: text
+  index: false
+update:
+  type: date
+  format: yyyy-MM-dd
+  index: false
+  ignore_malformed: true
+type:
+  type: keyword
+  index: true
+title:
+  type: text
+  index: true
+when:
+  properties:
+    from:
+      type: date
+      index: true
+      ignore_malformed: true
+    to:
+      type: date
+      index: true
+      ignore_malformed: true
+where:
+  properties:
+    east:
+      type: float
+      index: false
+    south:
+      type: float
+      index: false
+    north:
+      type: float
+      index: false
+    west:
+      type: float
+      index: false
+rights:
+  type: keyword
+  index: true
+platformDescription:
+  type: text
+  index: false
+platformTitle:
+  type: text
+  index: false
+parentId:
+  type: keyword
+  index: true
+online:
+  properties:
+    name:
+      type: text
+      index: true
+    description:
+      type: text
+      index: true
+    url:
+      type: text
+      index: false
+    protocol:
+      type: keyword
+      index: true
+    function:
+      type: keyword
+      index: true
+topic:
+  type: keyword
+  index: true
+id:
+  type: keyword
+  index: true
+keyword:
+  type: keyword
+  index: true
+geossCategory:
+  type: keyword
+  index: true
+coverageDescription:
+  type: text
+  index: false
+origOrgDesc:
+  type: keyword
+  index: true
+verticalExtent:
+  properties:
+    max:
+      type: double
+      index: true
+    min:
+      type: double
+      index: true
+spatialRepresentationType:
+  type: text
+  index: false
+overview:
+  type: text
+  index: false
+alternateTitle:
+  type: text
+  index: false
+author:
+  properties:
+    city:
+      type: text
+      index: true
+    email:
+      type: text
+      index: false
+    individualName:
+      type: text
+      index: true
+    online:
+      properties:
+        name:
+          type: text
+          index: false
+        description:
+          type: text
+          index: false
+        url:
+          type: text
+          index: false
+    orgName:
+      type: text
+      index: true
+    posName:
+      type: text
+      index: false
+lang:
+  type: keyword
+  index: true
+_ontology:
+  properties:
+    id:
+      type: keyword
+    ontology:
+      type: keyword
+    concept:
+      type: keyword
+    individual:
+      type: keyword
+    description:
+      type: text
+    creation:
+      type: date

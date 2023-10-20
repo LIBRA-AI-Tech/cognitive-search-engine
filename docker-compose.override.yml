@@ -11,7 +11,7 @@ services:
       target: "base"
       args:
         VERSION: "${VERSION}"
-    command: sh -c "python3 -m pip install --prefix=/usr/local -e . && geoss_search create-elastic-index --with-schema /var/local/metadata/schema.yml && exec uvicorn --host 0.0.0.0 --port 8000 geoss_search:app --reload"
+    command: sh -c "python3 -m pip install --prefix=/usr/local -e . && geoss_search create-elastic-index --with-schema /usr/local/geoss_search/elastic_schema.yml && exec uvicorn --host 0.0.0.0 --port 8000 geoss_search:app --reload"
     volumes:
       - type: bind
         source: .

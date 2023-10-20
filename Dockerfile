@@ -32,7 +32,7 @@ LABEL framework="fastapi"
 LABEL usage="Full text search on GEOSS metadata"
 
 RUN mkdir /usr/local/geoss_search/
-COPY setup.py README.md requirements-production.txt /usr/local/geoss_search/
+COPY setup.py README.md requirements-production.txt elastic_schema.yml /usr/local/geoss_search/
 COPY geoss_search /usr/local/geoss_search/geoss_search
 
 COPY docker-command.sh /usr/local/bin
