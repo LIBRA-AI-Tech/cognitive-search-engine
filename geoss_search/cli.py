@@ -164,6 +164,8 @@ def _get_schema_mappings(with_schema: Optional[str]=None) -> dict:
         dict: Schema definition.
     """
     import yaml
+    if not os.path.isfile(with_schema):
+        raise ValueError("`with_schema` parameter does not correspond to file")
     if with_schema is not None:
         with open(with_schema, 'r') as stream:
             try:
@@ -279,15 +281,6 @@ def create_elastic_index(**kwargs):
         "progress": {"type": "text"},
     }
     _create_elastic_index(es, 'ingest-jobs', with_schema={"mappings": {"properties": properties}})
-    properties = {
-        "record_id": {"type": "keyword"},
-        "ontology": {"type": "keyword"},
-        "concept": {"type": "keyword"},
-        "individual": {"type": "keyword"},
-        "description": {"type": "text"},
-        "creation": {"type": "date"},
-    }
-    _create_elastic_index(es, 'ontology', with_schema={"mappings": {"properties": properties}})
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))
