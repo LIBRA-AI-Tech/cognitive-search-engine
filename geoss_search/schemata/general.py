@@ -206,6 +206,48 @@ class SearchResults(BaseModel):
                             "bgFreq": 47,
                             "score": 0.37970087596968394
                         }
+                    ],
+                    "ontology": [
+                        {
+                            "term": "sdg",
+                            "freq": 198,
+                            "bgFreq": 198,
+                            "score": 1.749830797041825
+                        },
+                        {
+                            "term": "eo",
+                            "freq": 141,
+                            "bgFreq": 166,
+                            "score": 1.0466169150364792
+                        },
+                        {
+                            "term": "ecv",
+                            "freq": 45,
+                            "bgFreq": 47,
+                            "score": 0.37970087596968394
+                        }
+                    ],
+                    "concept": [
+                        {
+                            "term": "goal",
+                            "freq": 23,
+                            "bgFreq": 52,
+                            "score": 1.00222
+                        }
+                    ],
+                    "individual": [
+                        {
+                            "term": "http://metadata.un.org/sdg/1.1",
+                            "freq": 198,
+                            "bgFreq": 198,
+                            "score": 1.749830797041825
+                        },
+                        {
+                            "term": "http://metadata.un.org/sdg/1.3",
+                            "freq": 141,
+                            "bgFreq": 166,
+                            "score": 1.0466169150364792
+                        }
                     ]
                 },
                 "geojson": {
