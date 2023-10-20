@@ -268,10 +268,6 @@ services:
         source: ${INIT_DATA:-/dev/null}
         target: /var/local/metadata/data/
         read_only: true
-      - type: bind
-        source: ${INIT_DATA_SCHEMA:-/dev/null}
-        target: /var/local/metadata/schema.yml
-        read_only: true
       - type: volume
         source: certs
         target: /var/local/certs
@@ -314,10 +310,6 @@ services:
         source: ${INIT_DATA:-/dev/null}
         target: /var/local/metadata/data/
         read_only: true
-      - type: bind
-        source: ${INIT_DATA_SCHEMA:-/dev/null}
-        target: /var/local/metadata/schema.yml
-        read_only: true
       - type: volume
         source: certs
         target: /var/local/certs
@@ -334,7 +326,7 @@ services:
       - MODEL_PATH=/var/local/model
       - QUANTIZE_MODEL=${QUANTIZE_MODEL}
       - DATA_PATH=/var/local/metadata/data
-      - INIT_DATA_SCHEMA=/var/local/metadata/schema.yml
+      - INIT_DATA_SCHEMA=/usr/local/geoss_search/elastic_schema.yml
 
 volumes:
   certs:
