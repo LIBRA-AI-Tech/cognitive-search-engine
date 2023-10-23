@@ -139,6 +139,12 @@ class QueryModel(QueryBaseModel):
         description="[**FILTER**] Only records with the specific ontology individual will be returned",
         example="http://metadata.un.org/sdg/1"
     ))
+    extracted_keyword: Optional[str]=Field(Query(
+        None,
+        alias="extractedKeyword",
+        description="[**FILTER**] Only records including the specific extracted keywords will be returned",
+        example="climate change"
+    ))
     geoss_data_core: bool=Field(Query(
         False,
         alias="geossDataCore",

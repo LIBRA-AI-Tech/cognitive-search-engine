@@ -111,7 +111,17 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
     if params.time_start is not None or params.time_end is not None:
         handler = handler.between(from_=params.time_start, to_=params.time_end)
 
-    for key, value in {'source.id': params.sources, 'keyword': params.keyword, 'format': params.format, 'online.protocol': params.protocol, 'origOrgDesc': params.organisation_name, '_ontology.ontology': params.ontology, '_ontology.concept': params.concept, '_ontology.individual': params.individual}.items():
+    for key, value in {
+        'source.id': params.sources,
+        'keyword': params.keyword,
+        'format': params.format,
+        'online.protocol': params.protocol,
+        'origOrgDesc': params.organisation_name,
+        '_ontology.ontology': params.ontology,
+        '_ontology.concept': params.concept,
+        '_ontology.individual': params.individual,
+        '_extracted_keyword': params.extracted_keyword,
+    }.items():
         if value is None:
             continue
         terms = value.split(',')
@@ -128,6 +138,7 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
         'ontology': '_ontology.ontology',
         'concept': '_ontology.concept',
         'individual': '_ontology.individual',
+        'extractedKeyword': '_extracted_keyword',
     }.items():
         agg = Aggregation()
         agg_type = 'significant_terms' if params.terms_significance else 'terms'

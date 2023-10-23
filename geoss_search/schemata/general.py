@@ -74,6 +74,7 @@ class SignificantTermsList(BaseModel):
     ontology: List[SignificantTerms] = Query(..., description="Significant ontologies, sorted by significance score")
     concept: List[SignificantTerms] = Query(..., description="Significant ontology concepts, sorted by significance score")
     individual: List[SignificantTerms] = Query(..., description="Significant ontology individuals, sorted by significance score")
+    extractedKeyword: List[SignificantTerms] = Query(..., description="Significant extracted keywords, sorted by significance score")
 
 class SearchResults(BaseModel):
     """Output of search query."""
@@ -244,6 +245,20 @@ class SearchResults(BaseModel):
                         },
                         {
                             "term": "http://metadata.un.org/sdg/1.3",
+                            "freq": 141,
+                            "bgFreq": 166,
+                            "score": 1.0466169150364792
+                        }
+                    ],
+                    "extractedKeyword": [
+                        {
+                            "term": "climate change",
+                            "freq": 198,
+                            "bgFreq": 198,
+                            "score": 1.749830797041825
+                        },
+                        {
+                            "term": "green house gases",
                             "freq": 141,
                             "bgFreq": 166,
                             "score": 1.0466169150364792

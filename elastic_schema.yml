@@ -167,3 +167,6 @@ _ontology:
       type: text
     creation:
       type: date
+_extracted_keyword:
+  type: keyword
+  index: true
