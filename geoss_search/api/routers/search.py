@@ -121,7 +121,7 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
         '_ontology.concept': params.concept,
         '_ontology.individual': params.individual,
         '_extracted_keyword': params.extracted_keyword,
-        '_extracted_filetype': params.file_type,
+        '_extracted_filetype': params.extracted_filetype,
     }.items():
         if value is None:
             continue
