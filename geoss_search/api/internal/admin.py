@@ -20,7 +20,7 @@ async def ingest(ingestBody: IngestBody):
     response = await es.index(index='ingest-jobs', body={"started": datetime.now().isoformat(), "status": "pending", "elastic_index": elastic_index})
     token = response.get('_id')
     ingest_data_task.apply_async((ingestBody.path, ingestBody.embeddings, elastic_index), task_id=token)
-    return {"token": token, "url": f"/task/{token}"}
+    return {"token": token, "url": f"/admin/task/{token}"}
 
 @router.get('/task/{token}', summary="Get task info")
 async def get_task_info(token: str):
