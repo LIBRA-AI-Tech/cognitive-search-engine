@@ -121,6 +121,7 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
         '_ontology.concept': params.concept,
         '_ontology.individual': params.individual,
         '_extracted_keyword': params.extracted_keyword,
+        '_extracted_filetype': params.file_type,
     }.items():
         if value is None:
             continue
@@ -139,6 +140,7 @@ async def search(params: QueryModel = Depends(QueryModel.as_query)) -> None:
         'concept': '_ontology.concept',
         'individual': '_ontology.individual',
         'extractedKeyword': '_extracted_keyword',
+        'extractedFiletype': '_extracted_filetype',
     }.items():
         agg = Aggregation()
         agg_type = 'significant_terms' if params.terms_significance else 'terms'

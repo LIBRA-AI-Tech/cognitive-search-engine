@@ -145,6 +145,12 @@ class QueryModel(QueryBaseModel):
         description="[**FILTER**] Only records including the specific extracted keywords will be returned",
         example="climate change"
     ))
+    extracted_filetype: Optional[str]=Field(Query(
+        None,
+        alias="extractedFiletype",
+        description="[**FILTER**] Only records with online sources including the specific file types will be returned",
+        example="pdf"
+    ))
     geoss_data_core: bool=Field(Query(
         False,
         alias="geossDataCore",

@@ -170,3 +170,6 @@ _ontology:
 _extracted_keyword:
   type: keyword
   index: true
+_extracted_filetype:
+  type: keyword
+  index: true
