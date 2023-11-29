@@ -7,7 +7,9 @@ import warnings
 from typing import Optional, Iterator, Union
 from time import perf_counter
 from elasticsearch import Elasticsearch
-from elasticsearch.helpers import bulk 
+from elasticsearch.helpers import bulk
+from tqdm import tqdm
+import pandas as pd
 from .model_inference import get_dims
 from .settings import settings
 from .enrich import enrich, bulk_predict
@@ -48,7 +50,6 @@ async def _load_json(filename: str, **kwargs) -> Iterator[dict]:
     Yields:
         dict: Enriched entry
     """
-    from tqdm import tqdm
     with open(filename, 'r') as open_file:
         for report in tqdm(json.load(open_file).get('reports')):
             yield enrich(report, **kwargs)
@@ -106,7 +107,6 @@ def load_parquet(es: Elasticsearch, elastic_index: str, filename: str, **kwargs)
     Yields:
         Iterator[dict]: Dictionary represantation of each record (row).
     """
-    import pandas as pd
     from uuid import uuid4
     df = pd.read_parquet(filename)
     df = bulk_predict(df, **kwargs)
@@ -320,6 +320,28 @@ def ingest(path: str, **kwargs) -> None:
     if reset:
         _create_elastic_index(es, settings.elastic_index, force=reset, with_schema=with_schema)
     _ingest(es, path, **kwargs)
+
+@cli.command()
+@click.argument('path', type=click.Path(exists=True))
+@click.option('-i', '--index', default="data-insights", type=str)
+def import_parquet(path: str, index: str):
+    df = pd.read_parquet(path, engine="pyarrow")
+    es = Elasticsearch(
+        os.getenv("ELASTIC_NODE"),
+        ca_certs=os.path.join(os.getenv('CA_CERTS'), 'ca.crt'),
+        basic_auth=("elastic", os.getenv('ELASTIC_PASSWORD')),
+        request_timeout=360,
+    )
+    def _load_imported_parquet():
+        for _, row in tqdm(df.iterrows(), total=df.shape[0]):
+            yield row.to_dict()
+    info = bulk(es, _load_imported_parquet(),
+        index=index,
+        raise_on_error=False,
+        raise_on_exception=False,
+        max_retries=100,
+        request_timeout=360
+    )
 
 if __name__ == "__main__":
     cli()
