@@ -150,7 +150,7 @@ author:
     posName:
       type: text
       index: false
-lang:
+_lang:
   type: keyword
   index: true
 _ontology:

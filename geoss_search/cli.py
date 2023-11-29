@@ -281,6 +281,22 @@ def create_elastic_index(**kwargs):
         "progress": {"type": "text"},
     }
     _create_elastic_index(es, 'ingest-jobs', with_schema={"mappings": {"properties": properties}})
+    properties = {
+        "recordId": {"type": "keyword"},
+        "assetType": {"type": "keyword"},
+        "driver": {"type": "text"},
+        "insights": {"type": "text", "index": "false"}
+    }
+    _create_elastic_index(es, 'data-insights', with_schema={"mappings": {"properties": properties}})
+    properties = {
+        "recordId": {"type": "keyword"},
+        "results": {"properties": {
+            "title": {"type": "text", "index": "false"},
+            "link": {"type": "text", "index": "false"},
+            "description": {"type": "text", "index": "false"}
+        }}
+    }
+    _create_elastic_index(es, 'google-search', with_schema={"mappings": {"properties": properties}})
 
 @cli.command()
 @click.argument('path', type=click.Path(exists=True))

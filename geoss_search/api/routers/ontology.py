@@ -44,6 +44,8 @@ async def _check_record_id(record_id: str) -> Tuple[str, List[Dict[str, str]]]:
         records = response['hits']['hits'][0]['_source']['_ontology']
     except KeyError:
         records = []
+    if records is None:
+        records = []
     return response['hits']['hits'][0]['_id'], records
 
 async def _get_records_by_entry_id(entry_id: str) -> Tuple[str, List[Dict[str, str]]]:
