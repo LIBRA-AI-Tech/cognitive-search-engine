@@ -80,6 +80,8 @@ async def ontology(record_id: str = Query(..., description="Record ID")):
         records = records['hits']['hits'][0]['_source']['_ontology']
     except KeyError:
         records = []
+    if records is None:
+        records = []
     return records
 
 @router.post('/eiffo', summary="Add EIFF-O ontology details for a specific record", status_code=status.HTTP_201_CREATED)
