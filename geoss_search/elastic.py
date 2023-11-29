@@ -206,6 +206,7 @@ class SemanticSearch(Query):
 
     def parse(self):
         if self.query_ is not None:
+            self.filter("_lang", "en")
             self._payload["knn"] = {
                 "field": "_embedding",
                 "query_vector": predict(self.query_),
