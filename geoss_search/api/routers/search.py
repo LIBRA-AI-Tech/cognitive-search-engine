@@ -187,7 +187,7 @@ async def raw(
         raise HTTPException(status_code=404, detail="Record not found")
     return response['hits']['hits'][0]['_source']
 
-@router.get('/augmented', response_model=Augmented, summary="Retrieve augmented metadata for specific record")
+@router.get('/augmented', summary="Retrieve augmented metadata for specific record")
 async def raw(
     id: str=Query(..., description="Resource id"),
 ):
@@ -214,7 +214,20 @@ async def raw(
         external = json.loads(r.data) if r.status == 200 else None
     else:
         external = None
-    return {"insights": None, "externalSources": external, "extractedKeyphrases": None}
+    handler = ElasticQuery(es=es, index="data-insights")
+    handler = handler.query({
+        "term": {"recordId": {"value": id}}
+    })
+    response = await handler.exec()
+    if len(response['hits']['hits']) == 0:
+        insights = None
+    else:
+        insights = response['hits']['hits'][0]['_source']
+        asset_type = insights.pop('assetType')
+        driver = insights.pop('driver')
+        other = json.loads(insights.pop('insights'))
+        insights = {'assetType': asset_type, 'driver': driver, **other}
+    return {"insights": insights, "externalSources": external}
 
 @router.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(
