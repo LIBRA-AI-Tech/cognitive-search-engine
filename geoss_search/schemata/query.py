@@ -52,7 +52,7 @@ class QueryModel(QueryBaseModel):
         description="Determines the method applied to search for the query term(s) in metadata attributes.",
     ))
     min_score: float=Field(Query(
-        0,
+        0.62,
         alias="minScore",
         title="Minimum Score",
         description="Only results with a relevance score larger than this value will be included to the response.",
