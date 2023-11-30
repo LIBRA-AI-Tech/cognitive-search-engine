@@ -208,10 +208,14 @@ async def raw(
     
     geom = response['hits']['hits'][0]['fields']['_geom'][0]
     if geom['type'] == 'Polygon':
-        polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
-        http = urllib3.PoolManager()
-        r = http.request("GET", os.getenv('SPATIAL_CONTEXT_URL'), fields={'polygon': polygon}, headers={"Content-Type": "application/json"})
-        external = json.loads(r.data) if r.status == 200 else None
+        area = pg.area(pg.polygons(geom['coordinates'])[0])
+        if area > 800:
+            external = None
+        else:
+            polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
+            http = urllib3.PoolManager()
+            r = http.request("GET", os.getenv('SPATIAL_CONTEXT_URL'), fields={'polygon': polygon}, headers={"Content-Type": "application/json"})
+            external = json.loads(r.data) if r.status == 200 else None
     else:
         external = None
     handler = ElasticQuery(es=es, index="data-insights")
