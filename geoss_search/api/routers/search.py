@@ -192,6 +192,8 @@ async def raw(
     id: str=Query(..., description="Resource id"),
 ):
     """Get augmented metadata for a specific record, given its ID"""
+    # 1. Spatial context
+    area_threshold = 200
     handler = ElasticQuery(es=es)
     handler = handler.query({
         "bool": {
@@ -207,9 +209,10 @@ async def raw(
         raise HTTPException(status_code=404, detail="Record not found")
     
     geom = response['hits']['hits'][0]['fields']['_geom'][0]
+    area = pg.area(pg.polygons(geom['coordinates'])[0])
     if geom['type'] == 'Polygon':
         area = pg.area(pg.polygons(geom['coordinates'])[0])
-        if area > 800:
+        if area > area_threshold:
             external = None
         else:
             polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
@@ -218,6 +221,8 @@ async def raw(
             external = json.loads(r.data) if r.status == 200 else None
     else:
         external = None
+
+    # 2. Data insights
     handler = ElasticQuery(es=es, index="data-insights")
     handler = handler.query({
         "term": {"recordId": {"value": id}}
@@ -231,7 +236,18 @@ async def raw(
         driver = insights.pop('driver')
         other = json.loads(insights.pop('insights'))
         insights = {'assetType': asset_type, 'driver': driver, **other}
-    return {"insights": insights, "externalSources": external}
+
+    # 3. Google results
+    handler = ElasticQuery(es=es, index="google-search")
+    handler = handler.query({
+        "term": {"recordId": {"value": id}}
+    })
+    response = await handler.exec()
+    if len(response['hits']['hits']) == 0:
+        gresults = None
+    else:
+        gresults = response['hits']['hits'][0]['_source']['results']
+    return {"insights": insights, "externalSources": external, "googleSearch": gresults}
 
 @router.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(

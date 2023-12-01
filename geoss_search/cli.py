@@ -291,9 +291,14 @@ def create_elastic_index(**kwargs):
     properties = {
         "recordId": {"type": "keyword"},
         "results": {"properties": {
-            "title": {"type": "text", "index": "false"},
-            "link": {"type": "text", "index": "false"},
-            "description": {"type": "text", "index": "false"}
+            "recordId": {"type": "keyword"},
+            "results": {
+                "properties": {
+                    "title": {"type": "text", "index": "false"},
+                    "link": {"type": "text", "index": "false"},
+                    "description": {"type": "text", "index": "false"}
+                }
+            }
         }}
     }
     _create_elastic_index(es, 'google-search', with_schema={"mappings": {"properties": properties}})
