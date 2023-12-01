@@ -203,12 +203,15 @@ async def augmented(
         },
     })
     handler = handler._source(False)
-    handler = handler.fields(['_geom'])
+    handler = handler.fields(['_geom', '_extracted_keyword'])
     response = await handler.exec()
     if len(response['hits']['hits']) == 0:
         raise HTTPException(status_code=404, detail="Record not found")
     
     geom = response['hits']['hits'][0]['fields']['_geom'][0]
+    extracted_keyword = response['hits']['hits'][0]['fields'].get('_extracted_keyword', None)
+    if extracted_keyword is not None:
+        extracted_keyword = '; '.join(extracted_keyword)
     if geom['type'] == 'Polygon':
         area = pg.area(pg.polygons(geom['coordinates'])[0])
         if area > area_threshold:
@@ -246,7 +249,7 @@ async def augmented(
         gresults = None
     else:
         gresults = response['hits']['hits'][0]['_source']['results']
-    return {"insights": insights, "externalSources": external, "googleSearch": gresults}
+    return {"insights": insights, "externalSources": external, "extractedKeyphrases": extracted_keyword, "googleSearch": gresults}
 
 @router.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")
 async def metadata(
