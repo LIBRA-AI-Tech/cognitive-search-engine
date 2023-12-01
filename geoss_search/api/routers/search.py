@@ -188,7 +188,7 @@ async def raw(
     return response['hits']['hits'][0]['_source']
 
 @router.get('/augmented', summary="Retrieve augmented metadata for specific record")
-async def raw(
+async def augmented(
     id: str=Query(..., description="Resource id"),
 ):
     """Get augmented metadata for a specific record, given its ID"""
@@ -209,7 +209,6 @@ async def raw(
         raise HTTPException(status_code=404, detail="Record not found")
     
     geom = response['hits']['hits'][0]['fields']['_geom'][0]
-    area = pg.area(pg.polygons(geom['coordinates'])[0])
     if geom['type'] == 'Polygon':
         area = pg.area(pg.polygons(geom['coordinates'])[0])
         if area > area_threshold:
