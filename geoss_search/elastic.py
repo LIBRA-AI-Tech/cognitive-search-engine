@@ -232,7 +232,9 @@ class ExactSearch(Query):
                     {
                         "match_phrase": {
                             "title": match_phrase
-                        },
+                        }
+                    },
+                    {
                         "match_phrase": {
                             "description": match_phrase
                         }
