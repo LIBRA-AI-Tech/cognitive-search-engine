@@ -328,6 +328,39 @@ services:
       - DATA_PATH=/var/local/metadata/data
       - INIT_DATA_SCHEMA=/usr/local/geoss_search/elastic_schema.yml
 
+  kibana:
+    depends_on:
+      es01:
+        condition: service_healthy
+      es02:
+        condition: service_healthy
+      es03:
+        condition: service_healthy
+    image: docker.elastic.co/kibana/kibana:${STACK_VERSION}
+    networks:
+      - shared-network
+    volumes:
+      - certs:/usr/share/kibana/config/certs
+      - kibanadata:/usr/share/kibana/data
+    ports:
+      - ${KIBANA_PORT}:5601
+    environment:
+      - SERVERNAME=${KIBANA_SERVERNAME}
+      - SERVER_PUBLICBASEURL=${KIBANA_PUBLICBASEURL}
+      - ELASTICSEARCH_HOSTS=https://es01:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_PASSWORD}
+      - ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES=config/certs/ca/ca.crt
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -s -I http://localhost:5601 | grep -q 'HTTP/1.1 302 Found'",
+        ]
+      interval: 10s
+      timeout: 10s
+      retries: 120
+
 volumes:
   certs:
     driver: local
@@ -338,6 +371,8 @@ volumes:
   esdata03:
     driver: local
   redis:
+    driver: local
+  kibanadata:
     driver: local
 
 networks:
