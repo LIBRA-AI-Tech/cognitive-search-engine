@@ -34,7 +34,10 @@ setuptools.setup(
         "pygeos>=0.13,<0.14",
         "redisai>=1.2.2,<1.3.0",
         "celery[redis]>=5.2.7,<5.3.0",
-        "typing-extensions>=4.4.0,<=4.5.0"
+        "typing-extensions>=4.4.0,<=4.5.0",
+        "aiohttp>=3.8.4,<3.9.0",
+        "beautifulsoup4>=4.12.2,<4.13.0",
+        "lxml>=4.9.3,<4.10",
     ],
     package_data={'geoss_search': ['logging.conf']},
     python_requires='>=3.7',

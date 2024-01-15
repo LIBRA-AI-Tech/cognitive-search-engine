@@ -3,13 +3,14 @@ import math
 import json
 from typing import List, Optional
 import pygeos as pg
-from fastapi import Query, Depends, APIRouter, HTTPException
-import urllib3
+from fastapi import Query, Depends, APIRouter, HTTPException, BackgroundTasks
+import asyncio
 
 from geoss_search.elastic import Aggregation, SemanticSearch, ExactSearch, Query as ElasticQuery
 from geoss_search.schemata.general import ListOfRecords, SearchResults, SourceSchema, RawMetadata, Attributes
 from geoss_search.schemata.query import QueryModel
 from geoss_search.schemata.augmented import Augmented
+from geoss_search.augmented.helpers import spatial_context, get_google_results, get_insights
 
 from ..dependencies import es
 
@@ -187,13 +188,18 @@ async def raw(
         raise HTTPException(status_code=404, detail="Record not found")
     return response['hits']['hits'][0]['_source']
 
+async def cache_google_results(record_id, results):
+    index = 'google-search'
+    count_response = await es.count(index=index, body={"query": {"term": {"recordId": {"value": record_id}}}})
+    if count_response['count'] == 0:
+        await es.index(index=index, document=dict(recordId=record_id, results=results))
+
 @router.get('/augmented', summary="Retrieve augmented metadata for specific record")
 async def augmented(
-    id: str=Query(..., description="Resource id"),
+    background_tasks: BackgroundTasks,
+    id: str=Query(..., description="Resource id")
 ):
     """Get augmented metadata for a specific record, given its ID"""
-    # 1. Spatial context
-    area_threshold = 200
     handler = ElasticQuery(es=es)
     handler = handler.query({
         "bool": {
@@ -203,52 +209,21 @@ async def augmented(
         },
     })
     handler = handler._source(False)
-    handler = handler.fields(['_geom', '_extracted_keyword'])
+    handler = handler.fields(['_geom', '_extracted_keyword', 'description'])
     response = await handler.exec()
     if len(response['hits']['hits']) == 0:
         raise HTTPException(status_code=404, detail="Record not found")
     
     geom = response['hits']['hits'][0]['fields']['_geom'][0]
     extracted_keyword = response['hits']['hits'][0]['fields'].get('_extracted_keyword', None)
+    description = response['hits']['hits'][0]['fields'].get('description', None)
     if extracted_keyword is not None:
         extracted_keyword = '; '.join(extracted_keyword)
-    if geom['type'] == 'Polygon':
-        area = pg.area(pg.polygons(geom['coordinates'])[0])
-        if area > area_threshold:
-            external = None
-        else:
-            polygon = ';'.join([','.join(map(str, p)) for p in geom['coordinates'][0]])
-            http = urllib3.PoolManager()
-            r = http.request("GET", os.getenv('SPATIAL_CONTEXT_URL'), fields={'polygon': polygon}, headers={"Content-Type": "application/json"})
-            external = json.loads(r.data) if r.status == 200 else None
-    else:
-        external = None
+    tasks = (asyncio.create_task(spatial_context(geom)), asyncio.create_task(get_insights(id)), asyncio.create_task(get_google_results(id, description)))
+    external, insights, gresults = await asyncio.gather(*tasks, return_exceptions=True)
 
-    # 2. Data insights
-    handler = ElasticQuery(es=es, index="data-insights")
-    handler = handler.query({
-        "term": {"recordId": {"value": id}}
-    })
-    response = await handler.exec()
-    if len(response['hits']['hits']) == 0:
-        insights = None
-    else:
-        insights = response['hits']['hits'][0]['_source']
-        asset_type = insights.pop('assetType')
-        driver = insights.pop('driver')
-        other = json.loads(insights.pop('insights'))
-        insights = {'assetType': asset_type, 'driver': driver, **other}
+    background_tasks.add_task(cache_google_results, id, gresults)
 
-    # 3. Google results
-    handler = ElasticQuery(es=es, index="google-search")
-    handler = handler.query({
-        "term": {"recordId": {"value": id}}
-    })
-    response = await handler.exec()
-    if len(response['hits']['hits']) == 0:
-        gresults = None
-    else:
-        gresults = response['hits']['hits'][0]['_source']['results']
     return {"insights": insights, "externalSources": external, "extractedKeyphrases": extracted_keyword, "googleSearch": gresults}
 
 @router.get('/metadata', response_model=ListOfRecords, response_model_exclude_unset=True, summary="Retrieve metadata for a list of record IDs")

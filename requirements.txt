@@ -17,3 +17,6 @@ pygeos==0.13
 redisai==1.2.2
 celery[redis]==5.2.7
 typing-extensions==4.5.0
+aiohttp==3.8.4
+beautifulsoup4==4.12.2
+lxml==4.9.3
