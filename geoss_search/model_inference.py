@@ -1,13 +1,67 @@
 import os
+import string
+from typing import List, Union
 import torch
 import torch.nn.functional as F
 from redisai import Client
 from transformers import AutoTokenizer
-
 from sentence_transformers import SentenceTransformer
-from typing import List, Union
+from cleantext import clean
 import numpy as np
 from .settings import settings
+
+def _clean_txt(line):
+    # apply clean-text library
+    lines = clean(
+        line,
+        fix_unicode=True,
+        to_ascii=True,
+        lower=False,
+        normalize_whitespace=True,
+        no_line_breaks=True,
+        strip_lines=True,
+        keep_two_line_breaks=False,
+        no_urls=True,
+        no_emails=True,
+        no_phone_numbers=True,
+        no_numbers=False,
+        no_digits=False,
+        no_currency_symbols=True,
+        no_punct=False,
+        no_emoji=True,
+        replace_with_url="",
+        replace_with_email="",
+        replace_with_phone_number="",
+        replace_with_number="",
+        replace_with_digit="",
+        replace_with_currency_symbol="",
+        replace_with_punct="",
+    )
+
+    abstr_idx = lines.lower().find("abstract")
+    if abstr_idx != -1:
+        lines = lines[abstr_idx + 8 :]
+
+    refer_idx = lines.lower().rfind("references")
+    if refer_idx != -1:
+        lines = lines[: refer_idx + 9]
+
+    return lines
+
+
+def _rmv_undr(line):
+    line = line.replace("_", " ")
+    return line
+
+
+def _re_punct(lines):
+    remove = string.punctuation
+    remove = remove.replace(".", "")  # don't remove dot
+    lines = lines.translate({ord(char): " " for char in remove})
+    lines = " ".join(lines.split())
+    lines = lines.replace(" .", ".")
+
+    return lines
 
 class ModelInferenceOld:
     def __init__(self, model_name: str, quantize: bool=False, threads: int=1) -> None:
@@ -84,8 +138,9 @@ def predict(text: str) -> ModelInference.encode:
     Returns:
         ModelInference.encode: Resulted vector
     """
+    sanitized_text = _re_punct(_rmv_undr(_clean_txt(text)))
     model = ModelInference(settings.model_path, redis_host=os.getenv('REDIS_HOST', 'localhost'), redis_port=os.getenv('REDIS_PORT', 6379))
-    return model.encode(text)
+    return model.encode(sanitized_text)
 
 def get_dims() -> int:
     """Get the dimensionality of the model in use

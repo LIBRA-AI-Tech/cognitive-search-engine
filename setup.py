@@ -38,6 +38,7 @@ setuptools.setup(
         "aiohttp>=3.8.4,<3.9.0",
         "beautifulsoup4>=4.12.2,<4.13.0",
         "lxml>=4.9.3,<4.10",
+        "clean-text>=0.6.0,<0.7.0",
     ],
     package_data={'geoss_search': ['logging.conf']},
     python_requires='>=3.7',
