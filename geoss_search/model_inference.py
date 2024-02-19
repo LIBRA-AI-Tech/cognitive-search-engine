@@ -103,6 +103,9 @@ class ModelInference:
         self._redis = Client(host=redis_host, port=redis_port)
         self._tokenizer = AutoTokenizer.from_pretrained(model_path)
 
+    def _cls_pooling(self, model_output, attention_mask):
+        return model_output[:,0]
+
     def _mean_pooling(self, token_embeddings, attention_mask):
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
@@ -117,8 +120,9 @@ class ModelInference:
         dag.tensorget('pooler_output')
         _, _, _, last_hidden_state, pooler_output = dag.execute()
         del dag
-        embeddings = self._mean_pooling(torch.tensor(last_hidden_state), encoded_input['attention_mask'])
-        return F.normalize(embeddings, p=2, dim=1)[0].tolist()
+        embeddings = self._cls_pooling(torch.tensor(last_hidden_state), encoded_input['attention_mask'])
+        return embeddings.tolist()[0]
+        # return F.normalize(embeddings, p=2, dim=1)[0].tolist()
 
     def get_dims(self) -> int:
         """Get the dimensionality of the model
