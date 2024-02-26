@@ -222,7 +222,7 @@ class ExactSearch(Query):
     def parse(self) -> dict:
         match_phrase = {
             "query": self.query_,
-            "slop": 1,
+            "slop": 5,
             "analyzer": "standard",
             "zero_terms_query": "none"
         }
