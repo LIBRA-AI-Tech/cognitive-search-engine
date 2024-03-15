@@ -178,11 +178,12 @@ def _get_schema_mappings(with_schema: Optional[str]=None) -> dict:
                 schema = {}
     else:
         schema = {}
+    similarity = 'cosine' if os.getenv('MODEL_NORMALIZED') == 'true' else 'dot_product'
     schema['_embedding'] = {
         "type": "dense_vector",
         "dims": get_dims(),
         "index": True,
-        "similarity": "cosine"
+        "similarity": similarity,
     }
     schema['_geom'] = {
         "type": "geo_shape",
