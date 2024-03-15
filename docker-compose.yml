@@ -295,6 +295,8 @@ services:
       - CELERY_RESULT_BACKEND=redis://redisai:6379/0
       - ROOT_PATH=${ROOT_PATH}
       - SPATIAL_CONTEXT_URL=${SPATIAL_CONTEXT_URL}
+      - MAX_TOKEN=${MAX_TOKEN}
+      - EMBEDDING_DIMS=${EMBEDDING_DIMS}
 
   worker:
     depends_on:

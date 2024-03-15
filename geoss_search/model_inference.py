@@ -110,8 +110,18 @@ class ModelInference:
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
+    def _avg_pooling(self, last_hidden_states, attention_mask):
+        last_hidden = last_hidden_states.masked_fill(~attention_mask[..., None].bool(), 0.0)
+        return last_hidden.sum(dim=1) / attention_mask.sum(dim=1)[..., None]
+
     def encode(self, sentences: Union[str, List[str]]) -> List[float]:
-        encoded_input = self._tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
+        encoded_input = self._tokenizer(
+            sentences,
+            max_length=os.getenv('MAX_TOKEN', 512),
+            padding=True,
+            truncation=True,
+            return_tensors='pt'
+        )
         dag = self._redis.dag(routing=0, readonly=True)
         dag.tensorset('input_ids', encoded_input['input_ids'].numpy())
         dag.tensorset('attention_mask', encoded_input['attention_mask'].numpy())
@@ -120,9 +130,18 @@ class ModelInference:
         dag.tensorget('pooler_output')
         _, _, _, last_hidden_state, pooler_output = dag.execute()
         del dag
-        embeddings = self._cls_pooling(torch.tensor(last_hidden_state), encoded_input['attention_mask'])
-        return embeddings.tolist()[0]
-        # return F.normalize(embeddings, p=2, dim=1)[0].tolist()
+        model_pooling = os.getenv("MODEL_POOLING")
+        if model_pooling == 'mean':
+            embeddings = self._mean_pooling(torch.tensor(last_hidden_state), encoded_input['attention_mask'])
+        elif model_pooling == 'average':
+            embeddings = self._avg_pooling(torch.tensor(last_hidden_state), encoded_input['attention_mask'])
+        elif model_pooling == 'cls':
+            embeddings = self._cls_pooling(torch.tensor(last_hidden_state), encoded_input['attention_mask'])
+        else:
+            embeddings = torch.tensor(last_hidden_state)
+        model_normalized = os.getenv('MODEL_NORMALIZED', True) or os.getenv('MODEL_NORMALIZED') == 'true'
+        embeddings = F.normalize(embeddings, p=2, dim=1)[0].tolist() if model_normalized else embeddings.tolist()[0]
+        return embeddings
 
     def get_dims(self) -> int:
         """Get the dimensionality of the model
@@ -130,8 +149,7 @@ class ModelInference:
         Returns:
             int: Number of dimensions
         """
-        # TODO
-        return 384
+        return os.getenv("EMBEDDING_DIMS")
 
 def predict(text: str) -> ModelInference.encode:
     """Generate the embedding of a string

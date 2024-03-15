@@ -18,7 +18,13 @@ try:
     tokenizer = AutoTokenizer.from_pretrained(model_path)
     model = AutoModel.from_pretrained(model_path, torchscript=True).eval()
 
-    encoded_input = tokenizer("prompt text", padding=True, truncation=True, return_tensors="pt")
+    encoded_input = tokenizer(
+        "prompt text",
+        max_length=os.getenv("MAX_TOKEN", 512),
+        padding=True,
+        truncation=True,
+        return_tensors="pt"
+    )
     torchscript = "/var/local/traced_model.pt"
     with torch.no_grad():
         traced_model = torch.jit.trace(model, (encoded_input['input_ids'], encoded_input['attention_mask']))
