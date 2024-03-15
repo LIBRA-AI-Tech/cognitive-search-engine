@@ -116,6 +116,9 @@ def load_parquet(es: Elasticsearch, elastic_index: str, filename: str, **kwargs)
         src = row.source['id']
         title = row.title
         desc = row.description
+        if desc is not None and desc.strip() == '':
+            desc = None
+            record['description'] = None
         group = cache.get(src, title, desc)
         if group is not None:
             record['_group'] = group
