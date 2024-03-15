@@ -117,7 +117,7 @@ class ModelInference:
     def encode(self, sentences: Union[str, List[str]]) -> List[float]:
         encoded_input = self._tokenizer(
             sentences,
-            max_length=os.getenv('MAX_TOKEN', 512),
+            max_length=int(os.getenv('MAX_TOKEN', 512)),
             padding=True,
             truncation=True,
             return_tensors='pt'

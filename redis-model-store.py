@@ -20,7 +20,7 @@ try:
 
     encoded_input = tokenizer(
         "prompt text",
-        max_length=os.getenv("MAX_TOKEN", 512),
+        max_length=int(os.getenv("MAX_TOKEN", 512)),
         padding=True,
         truncation=True,
         return_tensors="pt"
