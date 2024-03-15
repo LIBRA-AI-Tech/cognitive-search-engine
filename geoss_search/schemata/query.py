@@ -1,3 +1,4 @@
+import os
 import inspect
 from pydantic import BaseModel, ValidationError, validator, Field
 from fastapi import Query
@@ -52,7 +53,7 @@ class QueryModel(QueryBaseModel):
         description="Determines the method applied to search for the query term(s) in metadata attributes.",
     ))
     min_score: float=Field(Query(
-        0.6,
+        os.getenv('SEARCH_THRESHOLD', 0.6),
         alias="minScore",
         title="Minimum Score",
         description="Only results with a relevance score larger than this value will be included to the response.",

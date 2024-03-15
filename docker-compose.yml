@@ -283,6 +283,8 @@ services:
       - QUANTIZE_MODEL=${QUANTIZE_MODEL}
       - ELASTIC_INDEX=${ELASTIC_INDEX}
       - SEARCH_SIZE=${SEARCH_SIZE}
+      - SEARCH_THRESHOLD=${SEARCH_THRESHOLD}
+      - SORT_FILTER_THRESHOLD=${SORT_FILTER_THRESHOLD}
       - INIT_DATA=/var/local/metadata/data/
       - INIT_DATA_SCHEMA=/usr/local/geoss_search/elastic_schema.yml
       - ADMIN_KEY=${ADMIN_KEY}
