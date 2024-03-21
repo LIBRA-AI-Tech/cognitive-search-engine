@@ -232,6 +232,10 @@ async def metadata(
     attributes: Optional[List[Attributes]]=Query(['id', 'title', 'description', 'source', 'online', 'keyword'], description="List of attributes that will be included in the response.")
 ):
     """Get metadata for a comma separated list of records, given their IDs"""
+    if 'id' not in attributes:
+        attributes.append('id')
+    if 'title' not in attributes:
+        attributes.append('title')
     id_array = ids.split(',')
     handler = ElasticQuery(es=es)
     handler = handler.query({

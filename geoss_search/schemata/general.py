@@ -1,7 +1,7 @@
 import os
 from fastapi import Query
 from pydantic import BaseModel, Field, DirectoryPath, validator
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 from enum import Enum
 from datetime import datetime
 from .geojson import GeoJSON
@@ -351,8 +351,8 @@ class SourceSchema(BaseModel):
 
 class TimePeriod(BaseModel):
     """Time period model"""
-    from_: datetime = Query(None, description="Begin of temporal extent")
-    to: datetime = Query(None, description="End of temporal extent")
+    from_: Union[datetime, Any] = Query(None, description="Begin of temporal extent")
+    to: Union[datetime, Any] = Query(None, description="End of temporal extent")
 
     class Config:
         fields = {
