@@ -48,7 +48,7 @@ async def get_insights(id_):
         driver = insights.pop('driver')
         other = json.loads(insights.pop('insights'))
         insights = {'assetType': asset_type, 'driver': driver, **other}
-    return None
+    return insights
 
 async def get_google_results(id_: str, description: str):
     handler = ElasticQuery(es=es, index="google-search")
